@@ -91,3 +91,8 @@ Screenshots: `HALFPAST_SNAPSHOT=x.png [HALFPAST_TIME="7:30am NY tue"] [HALFPAST_
 `HALFPAST_SETTINGS=x.png [HALFPAST_FIVE=1 HALFPAST_QUERY=Tok]`, `HALFPAST_WELCOME=x.png`,
 `HALFPAST_NOTCH=x.png` on build/Halfpast.app/Contents/MacOS/Halfpast — they render and quit
 without changing settings.
+
+## Licence
+
+MIT — see LICENSE. The bundled typeface, Hanken Grotesk, is under the SIL Open Font License
+(Resources/Fonts/OFL.txt).
