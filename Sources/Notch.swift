@@ -19,6 +19,8 @@ final class NotchUI: ObservableObject {
     var onTap: () -> Void = {}
     var onSettings: () -> Void = {}
     var onUpdates: () -> Void = {}
+    @Published var updateReady: String?  // a newer version Sparkle found in the background
+    var version: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "" }
     var onQuit: () -> Void = {}
 }
 
@@ -89,6 +91,10 @@ struct NotchView: View {
 
     private func ear(_ row: Row, leading: Bool) -> some View {
         HStack(spacing: 6) {
+            // A new version is waiting: a quiet arrow before the first place, until he looks.
+            if leading && ui.updateReady != nil {
+                Image(systemName: "arrow.down.circle.fill").font(.system(size: 10)).foregroundStyle(Trilegal.mist)
+            }
             if leading { mark(row) }
             if leading { Text(row.short).font(hanken(12)).foregroundStyle(Trilegal.mist) }
             Text(store.time(store.now, row).replacingOccurrences(of: " AM", with: "a").replacingOccurrences(of: " PM", with: "p"))

@@ -4,19 +4,17 @@
     <title>Halfpast</title>
     <link>https://exmachina.in/halfpast/</link>
     <item>
-      <title>Halfpast 1.1</title>
-      <pubDate>Sun, 18 Oct 2026 17:27:27 +0000</pubDate>
-      <sparkle:version>2</sparkle:version>
-      <sparkle:shortVersionString>1.1</sparkle:shortVersionString>
+      <title>Halfpast 1.1.1</title>
+      <pubDate>Sun, 18 Oct 2026 17:48:46 +0000</pubDate>
+      <sparkle:version>3</sparkle:version>
+      <sparkle:shortVersionString>1.1.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[<h3>Halfpast 1.1</h3>
+      <description><![CDATA[<h3>Halfpast 1.1.1</h3>
 <ul>
-<li><b>Working hours per place.</b> Set each place's hours and working days (Sun–Thu in the Gulf, Mon–Fri elsewhere); the grid and the fairest hour follow them.</li>
-<li><b>Holidays.</b> Each place's public holidays, and days off you add, show on the grid; a proposed time on one is flagged.</li>
-<li><b>Travel.</b> When your Mac changes time zone, Halfpast asks whether to plan from where you are.</li>
-<li><b>Updates.</b> Halfpast now checks for new versions by itself.</li>
+<li><b>Quieter updates.</b> When a new version is ready, a small arrow appears on the notch and an Update button in the ribbon, instead of a window that could open behind your other apps.</li>
+<li><b>Check for updates and Quit without right-clicking.</b> Both are now at the bottom of Places &amp; appearance; in the ribbon, press u to check and ⌘Q to quit. (Menu bar managers like Ice can take over the right-click on the notch.)</li>
 </ul>]]></description>
-      <enclosure url="https://exmachina.in/halfpast/Halfpast-1.1.dmg" type="application/octet-stream" sparkle:edSignature="inXNiJBG5G+nv/ZUBAGTfE9pWOR7hx2wI5CwzZmpMBQa9E5xfyRF4fwCccQoMVytsA55DSbUmvmZzFdOkJ6xAA==" length="2620162" />
+      <enclosure url="https://exmachina.in/halfpast/Halfpast-1.1.1.dmg" type="application/octet-stream" sparkle:edSignature="rP0oGyLfv7hXfqcv2bZAT7wJ8oTk0Dyw/fOBbyXoiAXp24c+bjApXD/LXMdiLAQbEeRh+S6e8G2s16ZSzOqrAw==" length="2673573" />
     </item>
   </channel>
 </rss>

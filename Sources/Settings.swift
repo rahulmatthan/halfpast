@@ -72,9 +72,23 @@ struct SettingsView: View {
                 Spacer(minLength: 12)
                 HStack {
                     (Text(Image(systemName: "star.fill")).foregroundColor(p.fair) + Text("  Two favourites sit beside the notch.     ")
-                    + Text(Image(systemName: "house.fill")).foregroundColor(p.homeTime) + Text("  One of them is home: the top row and the clock the rest follow."))
+                    + Text(Image(systemName: "house.fill")).foregroundColor(p.homeTime) + Text("  One is home, the clock the rest follow."))
                     .font(hanken(12)).foregroundStyle(p.mist)
                     Spacer()
+                    // Also on the right-click menu, which a menu bar manager like Ice can swallow.
+                    HStack(spacing: 10) {
+                        Text("Halfpast \(ui.version)").foregroundStyle(p.mist)
+                        Button { ui.onUpdates() } label: {
+                            Text(ui.updateReady.map { "Update to \($0)" } ?? "Check for updates").foregroundStyle(p.fair)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Check for a new version now (u in the ribbon)")
+                        Button { ui.onQuit() } label: { Text("Quit").foregroundStyle(p.mist) }
+                            .buttonStyle(.plain)
+                            .help("Quit Halfpast (⌘Q in the ribbon)")
+                    }
+                    .font(hanken(12, .semibold))
+                    .padding(.trailing, 14)
                     if snapshotMode {
                         Text("Open at login").font(hanken(12, .semibold)).foregroundStyle(p.mist)
                         Capsule().fill(p.button).frame(width: 26, height: 15)

@@ -94,6 +94,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 c.travel = t == "ask" ? nil : Travel(zone: TimeZone.current.identifier, here: t == "here")
                 store.showWithoutSaving(c)
             }
+            ui.updateReady = env["HALFPAST_UPDATE"]     // e.g. 1.2: shows the update reminders
             if let c = env["HALFPAST_COL"].flatMap(Int.init) { store.propose(col: c) }
             if let m = env["HALFPAST_MINUTES"].flatMap(Int.init) { store.setDuration(m) }
             if let q = env["HALFPAST_TIME"], let t = TimeParser.parse(q, store: store) { store.show(t) }
@@ -121,9 +122,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Updates: Sparkle checks exmachina.in/halfpast/appcast.xml once a day (Info.plist) and
         // offers a new version when there is one.
         if Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") != nil {
-            updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+            updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: self)
         }
-        ui.onUpdates = { [weak self] in NSApp.activate(); self?.updater?.checkForUpdates(nil) }
+        // Close the panel first: it hangs at status-bar level and would cover Sparkle's window.
+        ui.onUpdates = { [weak self] in
+            self?.closePanel()
+            NSApp.activate()
+            self?.updater?.checkForUpdates(nil)
+        }
 
         ui.onTap = { [weak self] in self?.togglePanel() }
         ui.onSettings = { [weak self] in self?.openPanel(settings: true) }
@@ -271,6 +277,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: the panel
 
+    fileprivate func updateFound(_ version: String?) { ui.updateReady = version }
+
     private func togglePanel() { ui.panelShown ? closePanel() : openPanel() }
 
     private func openPanel(settings: Bool = false) {
@@ -364,6 +372,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         if mods.contains(.command) {
             if e.charactersIgnoringModifiers == "w" { closePanel(); return true }
+            if e.charactersIgnoringModifiers == "q" { NSApp.terminate(nil); return true }
             if e.charactersIgnoringModifiers == "c" { copyText(); return true }
             return false
         }
@@ -393,6 +402,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case "[": store.changeDay(by: -1)
         case "]": store.changeDay(by: 1)
         case "d": store.cycleDuration()
+        case "u": ui.onUpdates()
         default: return false
         }
         return true
@@ -438,5 +448,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         r.scale = 2
         guard let cg = r.cgImage else { return nil }
         return NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:])
+    }
+}
+
+/// Gentle reminders (Sparkle's term): Halfpast has no Dock icon or window of its own, so an update
+/// alert found in the background could open unseen behind other apps. Instead a quiet arrow
+/// appears on the notch and an Update button in the ribbon; the alert opens when he asks.
+extension AppDelegate: SPUStandardUserDriverDelegate {
+    nonisolated var supportsGentleScheduledUpdateReminders: Bool { true }
+
+    nonisolated func standardUserDriverShouldHandleShowingScheduledUpdate(_ update: SUAppcastItem, andInImmediateFocus immediateFocus: Bool) -> Bool {
+        immediateFocus
+    }
+
+    nonisolated func standardUserDriverWillHandleShowingUpdate(_ handleShowingUpdate: Bool, forUpdate update: SUAppcastItem, state: SPUUserUpdateState) {
+        guard !handleShowingUpdate, !state.userInitiated else { return }
+        let version = update.displayVersionString
+        Task { @MainActor in self.updateFound(version) }
+    }
+
+    nonisolated func standardUserDriverDidReceiveUserAttention(forUpdate update: SUAppcastItem) {
+        Task { @MainActor in self.updateFound(nil) }
+    }
+
+    nonisolated func standardUserDriverWillFinishUpdateSession() {
+        Task { @MainActor in self.updateFound(nil) }
     }
 }

@@ -213,6 +213,10 @@ struct RibbonPanel: View {
                             .foregroundStyle(store.flash == nil ? p.mist : p.fair)
                     }
                     Spacer()
+                    if let v = ui.updateReady, !solid || snapshotMode {
+                        pill("Update to \(v)", p, strong: true) { ui.onUpdates() }
+                            .help("Halfpast \(v) is ready (u)")
+                    }
                     Button { ui.settingsShown = true } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "gearshape")

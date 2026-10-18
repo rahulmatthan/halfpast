@@ -23,6 +23,8 @@ weekend or holiday there four more; ties go to the smallest total). Hover a colu
 | d | meeting length: 15 → 30 → 45 → 60 minutes |
 | n | back to now |
 | t | 24-hour → AM/PM → 24-hour with a UTC row |
+| u | check for updates (or install the one waiting) |
+| ⌘Q | quit |
 | p | copy the ribbon as a picture (selected column included) |
 | c | copy the times as text |
 | esc | close |
@@ -81,10 +83,16 @@ favourites. The answer is saved as `travel` and cleared when the Mac is back on 
 
 **Updates.** Sparkle (2.10, in `vendor/`, fetched and checksum-checked by build.sh) checks
 https://exmachina.in/halfpast/appcast.xml once a day and offers a new version; right-click the
-cap › Check for Updates… does it now. Updates are verified with the EdDSA key in Info.plist
+cap › Check for Updates…, `u` in the ribbon, or "Check for updates" at the bottom of Places &
+appearance does it now (the right-click menu can be swallowed by a menu bar manager like Ice).
+A version found in the background doesn't pop up an alert — Halfpast has no Dock icon, so it
+would open unseen behind other apps. Instead (Sparkle's "gentle reminders",
+`SPUStandardUserDriverDelegate` in App.swift) a small arrow appears on the notch and an
+"Update to 1.x" button in the ribbon; the alert opens when he clicks it. Updates are verified with the EdDSA key in Info.plist
 (`SUPublicEDKey`) — see RELEASING.md.
 
-Right-click the cap for Places & appearance, Check for Updates and Quit. Scripts can post the distributed
+Right-click the cap for Places & appearance, Check for Updates and Quit — also at the bottom of
+Places & appearance, and `u` / ⌘Q in the ribbon. Scripts can post the distributed
 notifications `com.rahulmatthan.halfpast.toggle` and `com.rahulmatthan.halfpast.settings`.
 
 Without a notch (lid closed on an external display) a notch-sized spot at the top centre of the
