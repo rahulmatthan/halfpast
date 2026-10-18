@@ -67,7 +67,8 @@ The app has no auto-update: people get a new version by downloading it again. Se
 1. **The signing key.** In Keychain Access on a Mac that has it, find "Developer ID
    Application: Rahul Matthan" under My Certificates, expand it to check the private key is
    there, right-click › Export → a `.p12` with a password. Keep the `.p12` and its password
-   outside the repo (the secrets disk image and/or 1Password). On the new Mac, double-click the
+   outside the repo — the current key (Oct 2026) is in Rahul's 1Password, item "Apple – Developer ID
+   signing key (GAMJ6J6LT3)". On the new Mac, double-click the
    `.p12` and enter the password. If the key is lost, create a new Developer ID Application
    certificate at developer.apple.com › Certificates (only the Account Holder can) — apps
    already shipped keep working.
