@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Halfpast — the time elsewhere, in your notch</title>
+<meta name="description" content="Halfpast is a world clock for the Mac that lives in the notch. Rest your pointer on it for two places; click for every place on one ribbon, the fairest hour for a meeting, and a time you can propose by email.">
+<link rel="icon" href="img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F5F8FB; --panel: #FFFFFF; --ink: #182B49; --mist: #5A6270; --line: rgba(0,65,101,.12);
+  --teal: #0094B3; --button: #007C97; --red: #AA272F; --orange: #D9531E; --chip: rgba(0,65,101,.05);
+  --navy: #004165; --r1: #004165; --r2: #0094B3; --r3: #AA272F; --r4: #FF6D22; --r5: #636467;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #081E32; --panel: #0E2A44; --ink: #F2F6F9; --mist: #A6B8CA; --line: rgba(255,255,255,.12);
+    --teal: #3EC5E4; --button: #0094B3; --red: #F0707A; --orange: #FF6D22; --chip: rgba(255,255,255,.06);
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 18px/1.6 'Hanken Grotesk', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: var(--teal); text-decoration: none; }
+a:hover { text-decoration: underline; }
+img { max-width: 100%; display: block; }
+.ribbon { display: flex; height: 6px; }
+.ribbon i { flex: 1; }
+.ribbon i:nth-child(1) { background: var(--r1); } .ribbon i:nth-child(2) { background: var(--r2); }
+.ribbon i:nth-child(3) { background: var(--r3); } .ribbon i:nth-child(4) { background: var(--r4); }
+.ribbon i:nth-child(5) { background: var(--r5); }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+nav { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
+nav .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; color: var(--ink); }
+nav .brand img { width: 34px; height: 34px; }
+nav .links { display: flex; gap: 24px; font-size: 16px; }
+nav .links a { color: var(--mist); }
+
+.hero { padding: 48px 0 24px; text-align: center; }
+.hero h1 { font-size: clamp(48px, 9vw, 96px); line-height: 1; font-weight: 600; letter-spacing: -0.035em; margin: 0 0 18px; }
+.hero .lede { font-size: clamp(20px, 2.6vw, 26px); font-weight: 300; margin: 0 auto 14px; max-width: 760px; }
+.hero .dig { color: var(--mist); max-width: 640px; margin: 0 auto 30px; }
+.download { display: inline-flex; align-items: center; gap: 10px; background: var(--button); color: #fff; font-weight: 600; font-size: 18px; padding: 15px 26px; border-radius: 14px; }
+.download:hover { text-decoration: none; filter: brightness(1.08); }
+.download svg { width: 20px; height: 20px; }
+.meta { color: var(--mist); font-size: 15px; margin-top: 12px; }
+
+/* The notch demo: the top of a MacBook screen; hover (or tap) the notch. */
+.screen { margin: 44px auto 0; max-width: 980px; height: 210px; border-radius: 22px 22px 0 0; overflow: hidden; position: relative;
+  background: radial-gradient(120% 140% at 15% 0%, #0094B3 0%, transparent 55%), radial-gradient(90% 120% at 90% 30%, #FF6D22 0%, transparent 50%), radial-gradient(80% 120% at 50% 120%, #AA272F 0%, transparent 60%), #14384F; }
+.menubar { height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; color: #fff; font-size: 13px; background: rgba(255,255,255,.12); backdrop-filter: blur(12px); }
+.menubar b { font-weight: 600; }
+.notch { position: absolute; top: 0; left: 50%; height: 32px; width: 180px; transform: translateX(-50%); background: #000; border: 0; margin: 0; font: inherit; border-radius: 0 0 11px 11px; cursor: pointer;
+  transition: width .42s cubic-bezier(.34,1.56,.64,1), border-radius .42s; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; color: #fff; font-variant-numeric: tabular-nums; }
+.notch .ear { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; white-space: nowrap; opacity: 0; transform: scale(.55); filter: blur(3px); transition: opacity .18s, transform .18s, filter .18s; }
+.notch .ear span { color: #C3D0DC; font-weight: 400; font-size: 12px; }
+.notch .dot { width: 7px; height: 7px; border-radius: 50%; }
+.notch.open { width: 364px; border-radius: 0 0 14px 14px; }
+.notch.open .ear { opacity: 1; transform: scale(1); filter: none; transition: opacity .3s .09s, transform .45s .09s cubic-bezier(.34,1.8,.64,1), filter .3s .09s; }
+.screen .hint { position: absolute; left: 0; right: 0; top: 96px; text-align: center; color: rgba(255,255,255,.9); font-size: 15px; }
+@media (prefers-reduced-motion: reduce) { .notch, .notch .ear { transition: none !important; } }
+
+section { padding: 72px 0; border-top: 1px solid var(--line); }
+section h2 { font-size: clamp(30px, 4vw, 42px); line-height: 1.15; letter-spacing: -0.02em; font-weight: 600; margin: 0 0 14px; }
+section p.intro { color: var(--mist); max-width: 720px; margin: 0 0 32px; font-size: 19px; }
+.shot { display: block; border-radius: 18px; overflow: hidden; box-shadow: 0 30px 70px rgba(8,30,50,.18); border: 1px solid var(--line); }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; margin-top: 36px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+.card h3 { margin: 0 0 6px; font-size: 19px; font-weight: 600; }
+.card p { margin: 0; color: var(--mist); font-size: 16px; }
+.card .mark { width: 34px; height: 34px; border-radius: 9px; background: var(--chip); display: flex; align-items: center; justify-content: center; margin-bottom: 14px; color: var(--teal); }
+.card .mark svg { width: 18px; height: 18px; }
+.split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 44px; align-items: center; }
+.email { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; font-size: 15px; line-height: 1.7; font-variant-numeric: tabular-nums; }
+.email b { color: var(--red); font-weight: 600; }
+kbd { font: 600 14px 'Hanken Grotesk', sans-serif; background: var(--chip); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; white-space: nowrap; }
+table { width: 100%; border-collapse: collapse; font-size: 16px; }
+td { padding: 11px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+td:first-child { width: 190px; padding-right: 16px; }
+.steps { counter-reset: s; list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+.steps li { counter-increment: s; display: flex; gap: 14px; align-items: baseline; }
+.steps li::before { content: counter(s); font-weight: 700; color: #fff; background: var(--button); border-radius: 50%; width: 28px; height: 28px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+footer { padding: 40px 0 56px; color: var(--mist); font-size: 15px; border-top: 1px solid var(--line); }
+footer .row { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+
+@media (max-width: 860px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .split { grid-template-columns: minmax(0, 1fr); }
+  nav .links { display: none; }
+  .screen { height: 170px; border-radius: 16px 16px 0 0; }
+  .menubar b, .menubar span { visibility: hidden; }
+  .notch.open { width: min(364px, 92%); }
+  td:first-child { width: 120px; }
+}
+</style>
+</head>
+<body>
+<div class="ribbon" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+<div class="wrap">
+  <nav>
+    <a class="brand" href="#"><img src="img/icon.png" alt="">Halfpast</a>
+    <div class="links"><a href="#ribbon">Features</a><a href="#propose">Proposing a time</a><a href="#install">Install</a></div>
+  </nav>
+
+  <header class="hero">
+    <h1>Halfpast</h1>
+    <p class="lede">The time elsewhere, tucked into your notch.</p>
+    <p class="dig">Most world clocks were drawn for places that keep time on the hour. Halfpast was built in Bangalore, where the clock has always run thirty minutes off everyone else's — so it gets the awkward offsets right, and finds the hour that is fairest to all of them.</p>
+    <a class="download" href="Halfpast-1.0.dmg" download>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+      Download for Mac
+    </a>
+    <div class="meta">Free · macOS 15 Sequoia or later · Apple silicon and Intel · 1.3 MB</div>
+
+    <div class="screen" aria-label="A demonstration: the top of a Mac screen with the notch">
+      <div class="menubar"><b>Mail&nbsp;&nbsp;&nbsp;File&nbsp;&nbsp;&nbsp;Edit&nbsp;&nbsp;&nbsp;View</b><span id="clock"></span></div>
+      <button class="notch" id="notch" type="button" aria-label="Show the two places beside the notch">
+        <span class="ear"><i class="dot" id="dotA"></i><span>BLR</span><span id="timeA" style="color:#fff;font-weight:600;font-size:13px"></span></span>
+        <span class="ear"><span id="timeB" style="color:#fff;font-weight:600;font-size:13px"></span><span>CLE</span><i class="dot" id="dotB"></i></span>
+      </button>
+      <div class="hint">Rest your pointer on the notch</div>
+    </div>
+  </header>
+
+  <section id="ribbon">
+    <h2>Every place on one ribbon</h2>
+    <p class="intro">Click the notch, or press <kbd>⌃⌥T</kbd> anywhere. Each place is a 24-hour strip, lined up on the same moment: working hours in teal, the hours people are awake in a softer shade, the night left dark. Midnight shows the new day's date, so you can see who is already in tomorrow.</p>
+    <picture class="shot">
+      <source srcset="img/ribbon-dark.png" media="(prefers-color-scheme: dark)">
+      <img src="img/ribbon-light.png" alt="The Halfpast ribbon: six places as 24-hour strips, with the fairest hour outlined" loading="lazy">
+    </picture>
+    <div class="grid">
+      <div class="card">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c3 0 6 2 6 5.5"/></svg></div>
+        <h3>The fairest hour</h3>
+        <p>Halfpast outlines the hour that is least unkind to whoever is worst off — the one where nobody is dialling in at three in the morning if it can be helped.</p>
+      </div>
+      <div class="card">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><path d="M3 3l18 18"/></svg></div>
+        <h3>Hide a place for now</h3>
+        <p>Not everyone is in every meeting. Hide a place and it folds to a thin line, out of the fairest hour and out of the email, until you bring it back.</p>
+      </div>
+      <div class="card">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+        <h3>Summer time, handled</h3>
+        <p>Clocks change on different dates in different countries. Halfpast reads the Mac's own time zone data, so every offset is right on every day — no internet needed.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="propose">
+    <div class="split">
+      <div>
+        <h2>Propose a time in one click</h2>
+        <p class="intro" style="margin-bottom:22px">Click an hour and a meeting appears across every place. Nudge it five minutes at a time, drag it, or set it to 15, 30, 45 minutes or an hour. Or just type it — <kbd>7:30am NY tue</kbd>, <kbd>6:15 India</kbd>, <kbd>14.30 CET friday</kbd> — and the ribbon moves to that day.</p>
+        <p class="intro">Then <b>Copy for email</b>, and paste:</p>
+      </div>
+      <div class="email" aria-label="An example of the text Copy for email produces">
+        <b>Proposed time (1 hour):</b><br>
+        Bangalore: 17:00–18:00 IST, Tue 20 Oct<br>
+        Singapore: 19:30–20:30 SGT, Tue 20 Oct<br>
+        London: 12:30–13:30 BST, Tue 20 Oct<br>
+        Paris: 13:30–14:30 CEST, Tue 20 Oct<br>
+        Cleveland: 07:30–08:30 EDT, Tue 20 Oct<br>
+        San Francisco: 04:30–05:30 PDT, Tue 20 Oct
+      </div>
+    </div>
+  </section>
+
+  <section id="places">
+    <h2>Your places, your home</h2>
+    <p class="intro">Up to six places — any city, country or time zone, found as you type. Star two to sit beside the notch, and make one of them home: the top row, and the clock the rest are measured from. Home follows your Mac when you travel. Light, dark, or whatever your Mac is set to.</p>
+    <div class="shot"><img src="img/settings-light.png" alt="Places and appearance: five places with stars and a home, and a search adding Tokyo" loading="lazy"></div>
+  </section>
+
+  <section id="keys">
+    <h2>Keys</h2>
+    <p class="intro">Everything works from the keyboard once the ribbon is open.</p>
+    <table>
+      <tr><td><kbd>⌃⌥T</kbd></td><td>Open or close Halfpast from anywhere</td></tr>
+      <tr><td><kbd>0</kbd>–<kbd>9</kbd></td><td>Start typing a time: <kbd>6:15 india</kbd>, <kbd>7:30am NY tomorrow</kbd></td></tr>
+      <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Nudge the proposed time five minutes (with <kbd>⇧</kbd>, an hour)</td></tr>
+      <tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>Previous or next day</td></tr>
+      <tr><td><kbd>d</kbd></td><td>Meeting length: 15, 30, 45 or 60 minutes</td></tr>
+      <tr><td><kbd>f</kbd></td><td>Propose the fairest hour</td></tr>
+      <tr><td><kbd>n</kbd></td><td>Clear, and back to now</td></tr>
+      <tr><td><kbd>t</kbd></td><td>24-hour, AM/PM, or 24-hour with a UTC row</td></tr>
+      <tr><td><kbd>p</kbd> / <kbd>c</kbd></td><td>Copy the ribbon as a picture, or the times as text</td></tr>
+      <tr><td><kbd>s</kbd></td><td>Places &amp; appearance</td></tr>
+    </table>
+  </section>
+
+  <section id="install">
+    <div class="split">
+      <div>
+        <h2>Install</h2>
+        <ol class="steps">
+          <li><span>Download <a href="Halfpast-1.0.dmg" download>Halfpast-1.0.dmg</a> and open it.</span></li>
+          <li><span>Drag Halfpast into Applications, then open it.</span></li>
+          <li><span>A short welcome drops from the notch. From then on, rest your pointer on the notch — Halfpast opens when you log in.</span></li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3>Good to know</h3>
+        <p style="margin-bottom:10px">Made for Macs with a notch. On a Mac without one, the same spot at the top centre of the screen does the job.</p>
+        <p style="margin-bottom:10px">Private by design: no account, no tracking. Nothing leaves your Mac, except a place name you choose to look up with Apple Maps.</p>
+        <p>To remove it, quit Halfpast (right-click the notch) and drag it to the Bin.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap row">
+    <span>Halfpast 1.0 · made by <a href="https://rahulmatthan.com">Rahul Matthan</a></span>
+    <span>Set in Hanken Grotesk, under the SIL Open Font License</span>
+  </div>
+</footer>
+
+<script>
+// The demo shows the real time in Bangalore and Cleveland, with the same marks as the app:
+// teal at work (8–18), orange awake, grey asleep.
+(function () {
+  const fmt = (tz) => new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
+  const hour = (tz) => +new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: 'numeric', hour12: false }).format(new Date()) % 24;
+  const mark = (h) => h >= 8 && h < 18 ? '#0094B3' : h >= 6 && h < 23 ? '#FF6D22' : '#8EA2B5';
+  function tick() {
+    document.getElementById('timeA').textContent = fmt('Asia/Kolkata');
+    document.getElementById('timeB').textContent = fmt('America/New_York');
+    document.getElementById('dotA').style.background = mark(hour('Asia/Kolkata'));
+    document.getElementById('dotB').style.background = mark(hour('America/New_York'));
+    document.getElementById('clock').textContent = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date());
+  }
+  tick(); setInterval(tick, 15000);
+  const n = document.getElementById('notch');
+  let pinned = false;
+  n.addEventListener('mouseenter', () => n.classList.add('open'));
+  n.addEventListener('mouseleave', () => { if (!pinned) n.classList.remove('open'); });
+  n.addEventListener('click', () => { pinned = !pinned; n.classList.toggle('open', pinned); });
+  setTimeout(() => { n.classList.add('open'); setTimeout(() => { if (!pinned && !n.matches(':hover')) n.classList.remove('open'); }, 2600); }, 1200);
+})();
+</script>
+</body>
+</html>

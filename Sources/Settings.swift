@@ -7,10 +7,17 @@ struct SettingsView: View {
     @ObservedObject var store: Store
     @ObservedObject var ui: NotchUI
     @Environment(\.colorScheme) private var scheme
-    @State private var query = ""
+    @State private var query: String
+
+    init(store: Store, ui: NotchUI, query: String = "") {
+        self.store = store
+        self.ui = ui
+        _query = State(initialValue: query)
+    }
     @State private var remote: [City] = []
     @State private var lookingUp = false
     @FocusState private var searching: Bool
+    @State private var loginOn = LoginItem.enabled
 
     var body: some View {
         let p = Palette.of(scheme)
@@ -56,9 +63,24 @@ struct SettingsView: View {
                 .padding(.top, 22)
 
                 Spacer(minLength: 12)
-                (Text(Image(systemName: "star.fill")).foregroundColor(p.fair) + Text("  Two favourites sit either side of the notch.     ")
-                    + Text(Image(systemName: "house.fill")).foregroundColor(p.homeTime) + Text("  One of them is home: the top row, and the clock every other place is measured from."))
+                HStack {
+                    (Text(Image(systemName: "star.fill")).foregroundColor(p.fair) + Text("  Two favourites sit beside the notch.     ")
+                    + Text(Image(systemName: "house.fill")).foregroundColor(p.homeTime) + Text("  One of them is home: the top row and the clock the rest follow."))
                     .font(hanken(12)).foregroundStyle(p.mist)
+                    Spacer()
+                    if snapshotMode {
+                        Text("Open at login").font(hanken(12, .semibold)).foregroundStyle(p.mist)
+                        Capsule().fill(p.button).frame(width: 26, height: 15)
+                            .overlay(alignment: .trailing) { Circle().fill(.white).frame(width: 12).padding(.trailing, 1.5) }
+                    } else {
+                    Toggle(isOn: Binding(get: { loginOn }, set: { LoginItem.set($0); loginOn = LoginItem.enabled })) {
+                        Text("Open at login").font(hanken(12, .semibold)).foregroundStyle(p.mist)
+                    }
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+                    .tint(p.button)
+                    }
+                }
             }
             .padding(.horizontal, Metrics.pad)
             .padding(.top, 30)
@@ -105,11 +127,15 @@ struct SettingsView: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
+                if snapshotMode {
+                    Text(place.label).font(hanken(15, .semibold))
+                } else {
                 TextField("Name", text: Binding(
                     get: { i < store.config.places.count ? store.config.places[i].label : "" },
                     set: { if !$0.trimmingCharacters(in: .whitespaces).isEmpty, i < store.config.places.count { store.rename(i, to: $0) } }))
                     .textFieldStyle(.plain)
                     .font(hanken(15, .semibold))
+                }
                 Text(place.zone.isEmpty ? "Follows this Mac · \(row.abbr(at: store.now)) · \(store.time(store.now, row))"
                           : "\(place.zone.replacingOccurrences(of: "_", with: " ")) · \(row.abbr(at: store.now)) · \(store.time(store.now, row))")
                     .font(hanken(12)).foregroundStyle(p.mist).lineLimit(1)
@@ -155,11 +181,17 @@ struct SettingsView: View {
     private func searchField(_ p: Palette) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass").foregroundStyle(p.mist)
+            if snapshotMode {
+                Text(query.isEmpty ? "A city — Tokyo, Nairobi, Toronto…" : query).font(hanken(15))
+                    .foregroundStyle(query.isEmpty ? p.mist : p.text)
+                Spacer()
+            } else {
             TextField("A city — Tokyo, Nairobi, Toronto…", text: $query)
                 .textFieldStyle(.plain)
                 .font(hanken(15))
                 .focused($searching)
                 .onSubmit { if let first = matches.first { add(first) } }
+            }
         }
         .padding(.horizontal, 12)
         .frame(height: 40)

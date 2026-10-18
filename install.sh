@@ -1,18 +1,14 @@
 #!/bin/zsh
-# Build, install to ~/Applications and start Zones at login. Safe to re-run after changes.
+# Build and install to ~/Applications for day-to-day use on this Mac. Safe to re-run after changes.
+# (Others install from the .dmg that build-dmg.sh makes. Opening at login is the app's own
+# login item, switched in Places & appearance.)
 set -e
 cd "${0:A:h}"
 ./build.sh
-
-pkill -x Zones 2>/dev/null && sleep 1 || true
-mkdir -p ~/Applications ~/Library/LaunchAgents
-rm -rf ~/Applications/Zones.app
-cp -R build/Zones.app ~/Applications/
-rm -rf build/Zones.app   # one copy only, so Spotlight finds a single Zones
-
-uid=$(id -u)
-plist=~/dotfiles/launchagents/com.rahul.zones.plist
-cp "$plist" ~/Library/LaunchAgents/
-launchctl bootout gui/$uid/com.rahul.zones 2>/dev/null || true
-launchctl bootstrap gui/$uid ~/Library/LaunchAgents/com.rahul.zones.plist
-echo "installed — Zones is in the menu bar and starts at login"
+pkill -x Halfpast 2>/dev/null && sleep 1 || true
+mkdir -p ~/Applications
+rm -rf ~/Applications/Halfpast.app
+cp -R build/Halfpast.app ~/Applications/
+rm -rf build/Halfpast.app   # one copy only, so Spotlight finds a single Halfpast
+open ~/Applications/Halfpast.app
+echo "installed — rest the pointer on the notch"

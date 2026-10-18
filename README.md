@@ -1,6 +1,6 @@
-# Zones
+# Halfpast
 
-A world clock that lives in the MacBook's notch, modelled on the Omarchy *Timezones* plugin
+A world clock that lives in the MacBook's notch (named for India's half-hour offset, which most clocks get wrong), modelled on the Omarchy *Timezones* plugin
 (io.github.sspaeti.timezones) and worldtimebuddy.com, in Trilegal colours.
 
 There is no menu bar icon. Rest the pointer on the notch and a black cap springs out of it
@@ -58,25 +58,36 @@ second favourite. Home can't be unstarred or removed. A place with `"zone": ""` 
 follows the Mac's time zone whether or not it is home.
 
 Right-click the cap for Places & appearance and Quit. Scripts can post the distributed
-notifications `com.rahul.zones.toggle` and `com.rahul.zones.settings`.
+notifications `com.rahulmatthan.halfpast.toggle` and `com.rahulmatthan.halfpast.settings`.
 
 Without a notch (lid closed on an external display) a notch-sized spot at the top centre of the
 main screen does the same job.
 
 ## Places
 
-`~/.config/zones/places.json` (created on first run; Edit places… opens it).
+`~/Library/Application Support/Halfpast/places.json` (created on first run; written by Places & appearance; an older `~/.config/zones/places.json` is adopted once).
 `"zone": ""` with `"home": true` follows the Mac's own time zone. When the Mac is
-set to a zone not in `homeZones`, the home row is relabelled with where the
+set to a zone not in `homeHalfpast`, the home row is relabelled with where the
 clock actually is. `abbr` overrides the tzdata abbreviation (tzdata calls
 Singapore "+08"). `favourites` names the two places beside the camera, home first; `clickSound: false`
 keeps the haptic but drops the Tink. Summer time comes from macOS's own time zone data, so it is
 always correct without a network.
 
-## Build
+## Build, install, distribute
 
-`./install.sh` builds with swiftc (no Xcode), installs `~/Applications/Zones.app`
-and loads `com.rahul.zones` (plist in ~/dotfiles/launchagents) so it opens at login.
-`ZONES_SNAPSHOT=/tmp/x.png [ZONES_COL=19] [ZONES_FORMAT=utc] build/Zones.app/Contents/MacOS/Zones`
-renders the ribbon to a PNG and quits; `ZONES_NOTCH=/tmp/n.png` renders the open cap, `ZONES_SETTINGS=` the settings (text fields and glass
-don't render there — check those live); `ZONES_LIGHT=1` uses the light palette.
+- `./build.sh` — universal app (Apple silicon + Intel) with swiftc, no Xcode; Hanken Grotesk is
+  bundled (Resources/Fonts, SIL OFL) and registered at launch; the icon is drawn by
+  `scripts/make-icon.swift` (delete Resources/AppIcon.icns to redraw).
+- `./install.sh` — this Mac: ~/Applications/Halfpast.app, then opens it.
+- `./build-dmg.sh` — `dist/Halfpast-<version>.dmg` for anyone: Developer ID signature with the
+  hardened runtime, a drag-to-Applications image, then notarisation and stapling when the
+  keychain profile `notary` exists (see the top of the script).
+- First run: a welcome drops from the notch, and the app registers itself as a login item
+  (SMAppService; switch in Places & appearance).
+- `docs/` — the website (index.html, screenshots in img/). The download link expects
+  `docs/Halfpast-1.0.dmg` next to it.
+
+Screenshots: `HALFPAST_SNAPSHOT=x.png [HALFPAST_TIME="7:30am NY tue"] [HALFPAST_LIGHT=1]`,
+`HALFPAST_SETTINGS=x.png [HALFPAST_FIVE=1 HALFPAST_QUERY=Tok]`, `HALFPAST_WELCOME=x.png`,
+`HALFPAST_NOTCH=x.png` on build/Halfpast.app/Contents/MacOS/Halfpast — they render and quit
+without changing settings.

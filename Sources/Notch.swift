@@ -8,6 +8,7 @@ final class NotchUI: ObservableObject {
     @Published var showTimes = false    // the two times have popped in
     @Published var panelShown = false   // the glass ribbon has dropped down
     @Published var settingsShown = false // places & appearance instead of the ribbon
+    @Published var welcomeShown = false  // the first-run welcome instead of the ribbon
     var notchWidth: CGFloat = 185
     var height: CGFloat = 32
     let ear: CGFloat = 92               // how far the cap grows either side of the camera
@@ -80,7 +81,7 @@ struct NotchView: View {
         .contextMenu {
             Button("Places & appearance…") { ui.onSettings() }
             Divider()
-            Button("Quit Zones") { ui.onQuit() }
+            Button("Quit Halfpast") { ui.onQuit() }
         }
     }
 

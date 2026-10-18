@@ -1,10 +1,11 @@
 import AppKit
 import Combine
+import CoreText
 import Carbon.HIToolbox
 import SwiftUI
 
 @main
-struct ZonesApp: App {
+struct HalfpastApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     var body: some Scene { Settings { EmptyView() } }
 }
@@ -28,7 +29,13 @@ struct PanelHost: View {
 
     var body: some View {
         Group {
-            if ui.settingsShown {
+            if ui.welcomeShown {
+                WelcomeView(store: store, ui: ui) { setUp in
+                    store.markWelcomed()
+                    ui.welcomeShown = false
+                    ui.settingsShown = setUp
+                }
+            } else if ui.settingsShown {
                 SettingsView(store: store, ui: ui)
             } else {
                 RibbonPanel(store: store, ui: ui, onCopyInvite: onCopyInvite)
@@ -63,29 +70,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        // The typeface travels inside the app, so it looks the same on Macs that don't have it.
+        if let font = Bundle.main.url(forResource: "HankenGrotesk", withExtension: "ttf", subdirectory: "Fonts") {
+            CTFontManagerRegisterFontsForURL(font as CFURL, .process, nil)
+        }
         findNotch()
 
-        // ZONES_SNAPSHOT=/path.png [ZONES_COL=n] [ZONES_FORMAT=utc] [ZONES_LIGHT=1] renders the ribbon to a
-        // file and quits; ZONES_SETTINGS=/path.png renders the settings, ZONES_NOTCH=/path.png the open notch.
+        // HALFPAST_SNAPSHOT=/path.png [HALFPAST_COL=n] [HALFPAST_FORMAT=utc] [HALFPAST_LIGHT=1] renders the ribbon to a
+        // file and quits; HALFPAST_SETTINGS=/path.png renders the settings, HALFPAST_NOTCH=/path.png the open notch.
         // For checking layouts without Screen Recording permission.
         let env = ProcessInfo.processInfo.environment
-        if env["ZONES_SNAPSHOT"] != nil || env["ZONES_NOTCH"] != nil || env["ZONES_SETTINGS"] != nil {
-            if let c = env["ZONES_COL"].flatMap(Int.init) { store.propose(col: c) }
+        if env["HALFPAST_SNAPSHOT"] != nil || env["HALFPAST_NOTCH"] != nil || env["HALFPAST_SETTINGS"] != nil || env["HALFPAST_WELCOME"] != nil {
+            snapshotMode = true
+            if env["HALFPAST_FIVE"] != nil {      // five places, so the settings show the search
+                var c = store.config
+                c.places.removeAll { $0.label == "San Francisco" }
+                store.showWithoutSaving(c)
+            }
+            if let c = env["HALFPAST_COL"].flatMap(Int.init) { store.propose(col: c) }
             let keepMinutes = store.duration
-            if let m = env["ZONES_MINUTES"].flatMap(Int.init) { store.setDuration(m) }
-            if let q = env["ZONES_TIME"], let t = TimeParser.parse(q, store: store) { store.show(t) }
-            for name in (env["ZONES_HIDE"] ?? "").split(separator: ",") { store.hidden.insert(name.lowercased()) }
-            if let f = env["ZONES_FORMAT"].flatMap(HourFormat.init) { store.format = f }
+            if let m = env["HALFPAST_MINUTES"].flatMap(Int.init) { store.setDuration(m) }
+            if let q = env["HALFPAST_TIME"], let t = TimeParser.parse(q, store: store) { store.show(t) }
+            for name in (env["HALFPAST_HIDE"] ?? "").split(separator: ",") { store.hidden.insert(name.lowercased()) }
+            if let f = env["HALFPAST_FORMAT"].flatMap(HourFormat.init) { store.format = f }
             ui.expanded = true; ui.showTimes = true; ui.panelShown = true
-            let scheme: ColorScheme = env["ZONES_LIGHT"] != nil ? .light : .dark
-            if let path = env["ZONES_SNAPSHOT"] {
+            let scheme: ColorScheme = env["HALFPAST_LIGHT"] != nil ? .light : .dark
+            if let path = env["HALFPAST_SNAPSHOT"] {
                 try? render(RibbonPanel(store: store, ui: ui, solid: true, hints: true).environment(\.colorScheme, scheme))?.write(to: URL(fileURLWithPath: path))
             }
-            if let path = env["ZONES_SETTINGS"] {
-                try? render(SettingsView(store: store, ui: ui).background(scheme == .dark ? Color(hex: 0x081E32) : Color(hex: 0xF5F8FB))
+            if let path = env["HALFPAST_SETTINGS"] {
+                try? render(SettingsView(store: store, ui: ui, query: env["HALFPAST_QUERY"] ?? "").background(scheme == .dark ? Color(hex: 0x081E32) : Color(hex: 0xF5F8FB))
                     .environment(\.colorScheme, scheme))?.write(to: URL(fileURLWithPath: path))
             }
-            if let path = env["ZONES_NOTCH"] {
+            if let path = env["HALFPAST_WELCOME"] {
+                try? render(WelcomeView(store: store, ui: ui) { _ in }.environment(\.colorScheme, scheme))?.write(to: URL(fileURLWithPath: path))
+            }
+            if let path = env["HALFPAST_NOTCH"] {
                 try? render(NotchView(store: store, ui: ui).padding(30).background(Color(hex: 0x3A4A5A)))?.write(to: URL(fileURLWithPath: path))
             }
             store.setDuration(keepMinutes)     // the snapshot must not change his setting
@@ -113,6 +133,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // The settings view and the ribbon differ in height: re-hang the panel when they swap, and
         // when places are added or removed.
         ui.$settingsShown.dropFirst().sink { [weak self] _ in DispatchQueue.main.async { self?.layoutPanel() } }.store(in: &watches)
+        ui.$welcomeShown.dropFirst().sink { [weak self] _ in DispatchQueue.main.async { self?.layoutPanel() } }.store(in: &watches)
         store.$config.map(\.places.count).removeDuplicates().dropFirst().sink { [weak self] _ in
             DispatchQueue.main.async { self?.layoutPanel() }
         }.store(in: &watches)
@@ -131,12 +152,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor in self?.closePanel() }
         }
         hotkey = Hotkey(keyCode: kVK_ANSI_T, modifiers: controlKey | optionKey, id: 1) { [weak self] in self?.togglePanel() }
-        // Scripts and keybinding tools can open or close it too: post com.rahul.zones.toggle
-        // (or com.rahul.zones.settings to open straight into Places & appearance).
-        DistributedNotificationCenter.default().addObserver(forName: Notification.Name("com.rahul.zones.toggle"), object: nil, queue: .main) { [weak self] _ in
+        // Scripts and keybinding tools can open or close it too: post com.rahulmatthan.halfpast.toggle
+        // (or com.rahulmatthan.halfpast.settings to open straight into Places & appearance).
+        DistributedNotificationCenter.default().addObserver(forName: Notification.Name("com.rahulmatthan.halfpast.toggle"), object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.togglePanel() }
         }
-        DistributedNotificationCenter.default().addObserver(forName: Notification.Name("com.rahul.zones.settings"), object: nil, queue: .main) { [weak self] _ in
+        DistributedNotificationCenter.default().addObserver(forName: Notification.Name("com.rahulmatthan.halfpast.settings"), object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.openPanel(settings: true) }
         }
 
@@ -147,6 +168,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         RunLoop.main.add(t, forMode: .common)
         poll = t
+
+        // First run: open at login (switchable in Places & appearance) and say hello from the notch.
+        if !store.config.welcomed {
+            if Bundle.main.bundlePath.hasSuffix("/Applications/Halfpast.app") { LoginItem.set(true) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                self?.ui.welcomeShown = true
+                self?.openPanel()
+            }
+        }
 
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.closePanel(); self?.findNotch() }
@@ -250,6 +280,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard !ui.panelShown else { return }
             panel.orderOut(nil)
             ui.settingsShown = false
+            if ui.welcomeShown { ui.welcomeShown = false; store.markWelcomed() }
             store.backToNow()
             if !cap.frame.insetBy(dx: -16, dy: -16).contains(NSEvent.mouseLocation) { collapse() }
         }
@@ -268,7 +299,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// slides it in 5-minute steps. Done here rather than with SwiftUI gestures so the first click
     /// counts in a panel that never activates the app.
     private func gridMouse(_ e: NSEvent) -> NSEvent? {
-        guard e.window === panel, ui.panelShown, !ui.settingsShown, store.timeQuery == nil,
+        guard e.window === panel, ui.panelShown, !ui.settingsShown, !ui.welcomeShown, store.timeQuery == nil,
               let view = panel.contentView else { return e }
         let x = e.locationInWindow.x
         let fromTop = view.bounds.height - e.locationInWindow.y
@@ -301,6 +332,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func handleKey(_ e: NSEvent) -> Bool {
         let mods = e.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if ui.welcomeShown {
+            if Int(e.keyCode) == kVK_Escape { closePanel(); return true }
+            return false
+        }
         // Typing a time: keys belong to the field; esc puts the earlier time back.
         if store.timeQuery != nil {
             if Int(e.keyCode) == kVK_Escape { store.finishTyping(keep: false); return true }

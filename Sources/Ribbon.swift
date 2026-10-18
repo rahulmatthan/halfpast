@@ -62,6 +62,10 @@ struct Frost: NSViewRepresentable {
     func updateNSView(_ v: NSVisualEffectView, context: Context) { v.material = material }
 }
 
+/// Set when rendering screenshots (HALFPAST_* in AppDelegate): plain fills instead of glass, and
+/// text fields drawn as text, since ImageRenderer can draw neither.
+@MainActor var snapshotMode = false
+
 /// What the ribbon and the settings view share: the glass, its edge, and the Trilegal ribbon
 /// along the bottom.
 struct PanelChrome<Content: View>: View {
@@ -83,7 +87,7 @@ struct PanelChrome<Content: View>: View {
         }
         .foregroundStyle(p.text)
         .background {
-            if solid { p.tint } else { ZStack { Frost(material: p.material); p.tint.opacity(p.tintOpacity) } }
+            if solid || snapshotMode { p.tint } else { ZStack { Frost(material: p.material); p.tint.opacity(p.tintOpacity) } }
         }
         .clipShape(shape)
         .overlay(shape.strokeBorder(p.border, lineWidth: 1))

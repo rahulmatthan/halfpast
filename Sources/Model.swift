@@ -12,21 +12,30 @@ struct Place: Codable {
 
 struct Config: Codable {
     var hourFormat = "24h"                      // 24h, 12h or utc
-    var homeZones = ["Asia/Kolkata"]            // where the place that follows the Mac keeps its own label
-    var favourites = ["Bangalore", "Cleveland"] // the two beside the notch; the home place is always one
+    var homeZones = [TimeZone.current.identifier]   // where the place that follows the Mac keeps its own label
+    var favourites = Config.defaultFavourites       // the two beside the notch; the home place is always one
     var clickSound = true                       // a soft click when the notch opens
     var appearance = "system"                   // system, light or dark
     var meetingMinutes = 60                     // the length of a proposed meeting: 15, 30, 45 or 60
+    var welcomed = false                        // the first-run welcome has been shown
     var places = Config.defaultPlaces
 
-    static let defaultPlaces = [
-        Place(label: "Bangalore", short: "BLR", zone: "", home: true),
-        Place(label: "Singapore", short: "SIN", zone: "Asia/Singapore", abbr: "SGT"),
-        Place(label: "London", short: "LON", zone: "Europe/London"),
-        Place(label: "Paris", short: "PAR", zone: "Europe/Paris"),
-        Place(label: "Cleveland", short: "CLE", zone: "America/New_York"),
-        Place(label: "San Francisco", short: "SF", zone: "America/Los_Angeles"),
-    ]
+    /// A new Mac's places: home (its own time zone, named after its city) and the first three of
+    /// London, New York, Singapore and Tokyo that are somewhere else.
+    static var defaultPlaces: [Place] {
+        let here = TimeZone.current.identifier
+        let name = Cities.curated.first { $0.zone == here }?.name
+            ?? here.split(separator: "/").last.map { $0.replacingOccurrences(of: "_", with: " ") } ?? "Home"
+        let home = Place(label: name, short: shortLabel(name), zone: "", home: true)
+        let others = [("London", "LON", "Europe/London"), ("New York", "NYC", "America/New_York"),
+                      ("Singapore", "SIN", "Asia/Singapore"), ("Tokyo", "TYO", "Asia/Tokyo")]
+            .filter { $0.2 != here && $0.0 != name }
+            .prefix(3)
+            .map { Place(label: $0.0, short: $0.1, zone: $0.2) }
+        return [home] + others
+    }
+
+    static var defaultFavourites: [String] { Array(defaultPlaces.prefix(2).map(\.label)) }
 
     init() {}
 
@@ -42,15 +51,25 @@ struct Config: Codable {
         clickSound = try c.decodeIfPresent(Bool.self, forKey: .clickSound) ?? d.clickSound
         appearance = try c.decodeIfPresent(String.self, forKey: .appearance) ?? d.appearance
         meetingMinutes = try c.decodeIfPresent(Int.self, forKey: .meetingMinutes) ?? d.meetingMinutes
+        welcomed = try c.decodeIfPresent(Bool.self, forKey: .welcomed) ?? d.welcomed
         places = try c.decodeIfPresent([Place].self, forKey: .places) ?? d.places
     }
 
-    static let url = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent(".config/zones/places.json")
+    static let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("Halfpast/places.json")
+
+    /// Before the name Halfpast the file lived at ~/.config/zones/places.json; carry it over once.
+    private static func adoptOldFile() {
+        let old = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/zones/places.json")
+        guard !FileManager.default.fileExists(atPath: url.path), FileManager.default.fileExists(atPath: old.path) else { return }
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? FileManager.default.copyItem(at: old, to: url)
+    }
 
     /// Reads places.json. Writes it on first run, and rewrites it when a newer setting is
     /// missing so the file always shows every option.
     static func load() -> Config {
+        adoptOldFile()
         let data = try? Data(contentsOf: url)
         if let data, (try? JSONDecoder().decode(Config.self, from: data)) == nil { return Config() }  // broken file: leave it for him to fix
         let read = data.flatMap { try? JSONDecoder().decode(Config.self, from: $0) } ?? Config()
@@ -89,8 +108,8 @@ struct Config: Codable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case hourFormat, homeZones, favourites, clickSound, appearance, meetingMinutes, places
-        static let allNames = ["hourFormat", "homeZones", "favourites", "clickSound", "appearance", "meetingMinutes", "places"]
+        case hourFormat, homeZones, favourites, clickSound, appearance, meetingMinutes, welcomed, places
+        static let allNames = ["hourFormat", "homeZones", "favourites", "clickSound", "appearance", "meetingMinutes", "welcomed", "places"]
     }
     private enum Legacy: String, CodingKey { case notch }
 }
@@ -308,6 +327,11 @@ final class Store: ObservableObject {
     }
 
     func setAppearance(_ a: String) { change { $0.appearance = a } }
+
+    func markWelcomed() { change { $0.welcomed = true } }
+
+    /// Screenshots only: show a different set of places without touching his file.
+    func showWithoutSaving(_ c: Config) { config = c.tidied() }
 
     func has(_ city: City) -> Bool {
         config.places.contains { $0.zone == city.zone && $0.label.caseInsensitiveCompare(city.name) == .orderedSame }
