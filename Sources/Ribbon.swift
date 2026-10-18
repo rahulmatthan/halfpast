@@ -18,6 +18,7 @@ struct Palette {
     let tint: Color, tintOpacity: Double, material: NSVisualEffectView.Material
     let text, mist: Color
     let work, workText, awake, awakeText, asleep, asleepText, selected: Color
+    let off, offText: Color         // working hours on a weekend or holiday
     let now, fair, homeTime, proposed: Color
     let border, chip, chipBorder, button: Color
 
@@ -26,6 +27,7 @@ struct Palette {
         text: .white, mist: Color(hex: 0xC3D0DC),
         work: Trilegal.teal.opacity(0.62), workText: .white, awake: .white.opacity(0.13), awakeText: .white,
         asleep: .white.opacity(0.04), asleepText: Color(hex: 0x8EA2B5), selected: Trilegal.red.opacity(0.92),
+        off: Trilegal.orange.opacity(0.24), offText: Color(hex: 0xFFC9A8),
         now: Trilegal.orange, fair: Color(hex: 0x3EC5E4), homeTime: Trilegal.orange, proposed: Color(hex: 0xF0707A),
         border: .white.opacity(0.2), chip: .white.opacity(0.10), chipBorder: .white.opacity(0.18), button: Trilegal.teal.opacity(0.7))
 
@@ -34,6 +36,7 @@ struct Palette {
         text: Color(hex: 0x182B49), mist: Color(hex: 0x5A6270),
         work: Color(hex: 0x007C97), workText: .white, awake: Trilegal.navy.opacity(0.08), awakeText: Color(hex: 0x182B49),
         asleep: Trilegal.navy.opacity(0.03), asleepText: Color(hex: 0x8A93A3), selected: Trilegal.red,
+        off: Trilegal.orange.opacity(0.16), offText: Color(hex: 0xB4471A),
         now: Trilegal.orange, fair: Trilegal.teal, homeTime: Color(hex: 0xD9531E), proposed: Trilegal.red,
         border: Trilegal.navy.opacity(0.14), chip: Trilegal.navy.opacity(0.05), chipBorder: Trilegal.navy.opacity(0.12), button: Color(hex: 0x007C97))
 
@@ -202,9 +205,13 @@ struct RibbonPanel: View {
             bar(p).padding(.horizontal, Metrics.pad).padding(.top, 18)
 
             if hints {
-                HStack {
-                    Text(store.flash ?? "Click an hour  ·  ← → nudge 5 min (⇧ an hour)  ·  drag the block  ·  type: 7:30am NY tue  ·  [ ] day  ·  d length  ·  n clear")
-                        .foregroundStyle(store.flash == nil ? p.mist : p.fair)
+                HStack(spacing: 10) {
+                    if store.flash == nil && store.away && (!solid || snapshotMode) {
+                        travel(p)
+                    } else {
+                        Text(store.flash ?? "Click an hour  ·  ← → nudge 5 min (⇧ an hour)  ·  drag the block  ·  type: 7:30am NY tue  ·  [ ] day  ·  d length  ·  n clear")
+                            .foregroundStyle(store.flash == nil ? p.mist : p.fair)
+                    }
                     Spacer()
                     Button { ui.settingsShown = true } label: {
                         HStack(spacing: 6) {
@@ -227,13 +234,59 @@ struct RibbonPanel: View {
         }
     }
 
+    /// Away from home: where the Mac's clock is, and which place the grid is measured from.
+    private func travel(_ p: Palette) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "airplane").foregroundStyle(p.fair)
+            if store.travelUndecided {
+                Text("This Mac is on \(store.hereName) time.").foregroundStyle(p.text)
+                pill("Plan from \(store.hereName)", p, strong: true) { store.planFromHere(true) }
+                pill("Keep \(store.homeName)", p) { store.planFromHere(false) }
+            } else if store.planningHere {
+                Text("Planning from \(store.hereName) while you travel").foregroundStyle(p.mist)
+                pill("Plan from \(store.homeName)", p) { store.planFromHere(false) }
+            } else {
+                Text("On \(store.hereName) time · planning from \(store.homeName)").foregroundStyle(p.mist)
+                pill("Plan from \(store.hereName)", p) { store.planFromHere(true) }
+            }
+        }
+    }
+
+    private func pill(_ label: String, _ p: Palette, strong: Bool = false, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(hanken(12, .semibold))
+                .foregroundStyle(strong ? .white : p.text)
+                .padding(.horizontal, 10).padding(.vertical, 4)
+                .background(strong ? p.button : p.chip, in: Capsule())
+                .overlay(Capsule().strokeBorder(strong ? .clear : p.chipBorder))
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
     private func header(_ row: Row, _ focus: Date, _ p: Palette) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
+        let off = store.dayOff(row, at: focus)
+        return HStack(alignment: .firstTextBaseline, spacing: 12) {
             Text(store.time(focus, row))
                 .font(hanken(store.format.twelve ? 22 : 27, .light))
                 .foregroundStyle(row.isHome ? p.homeTime : p.text)
             VStack(alignment: .leading, spacing: 1) {
-                Text(row.label).font(hanken(15, .semibold)).lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(row.label).font(hanken(15, .semibold)).lineLimit(1).layoutPriority(1)
+                    if let off {
+                        // A weekend, a holiday or a day off where this place is, at the moment shown;
+                        // weekends quietly, the rest in the holiday colour.
+                        let quiet: Bool = { if case .weekend = off { return true }; return false }()
+                        Text(off.off ? off.name : "\(off.name)?")
+                            .font(hanken(11, .semibold))
+                            .foregroundStyle(quiet ? p.mist : p.offText)
+                            .lineLimit(1)
+                            .padding(.horizontal, 6).padding(.vertical, 1)
+                            .background(quiet ? p.chip : p.off, in: Capsule())
+                            .help(offHelp(off, row))
+                    }
+                }
                 Text(meta(row, focus)).font(hanken(12)).foregroundStyle(p.mist).lineLimit(1)
             }
         }
@@ -271,6 +324,15 @@ struct RibbonPanel: View {
         .buttonStyle(.plain)
     }
 
+    private func offHelp(_ d: DayOff, _ row: Row) -> String {
+        switch d {
+        case .weekend: return "Not a working day in \(row.label)"
+        case .holiday(let n): return "\(n): a public holiday in \(row.country.map(Country.name) ?? row.label)"
+        case .ownDay: return "A day off you added for \(row.label)"
+        case .regional(let n, let w): return "\(n): a holiday in \(w) only"
+        }
+    }
+
     private func meta(_ row: Row, _ focus: Date) -> String {
         [row.abbr(at: focus), store.date(focus, row), store.diff(row, at: focus)].filter { !$0.isEmpty }.joined(separator: " · ")
     }
@@ -286,10 +348,9 @@ struct RibbonPanel: View {
         let at = store.instant(col)
         let c = row.cal.dateComponents([.hour, .day, .weekday], from: at)
         let hour = c.hour ?? 0
-        let phase = Phase(hour: hour)
-        let selected = false
-        let fill = phase == .work ? p.work : phase == .awake ? p.awake : p.asleep
-        let ink = selected ? Color.white : phase == .work ? p.workText : phase == .awake ? p.awakeText : p.asleepText
+        let phase = store.phase(row, at: at, mid: true)
+        let fill = [Phase.work: p.work, .off: p.off, .awake: p.awake, .asleep: p.asleep][phase]!
+        let ink = [Phase.work: p.workText, .off: p.offText, .awake: p.awakeText, .asleep: p.asleepText][phase]!
         return ZStack {
             fill
             if hour == 0 {
@@ -299,7 +360,7 @@ struct RibbonPanel: View {
                     Text("\(c.day ?? 1)")
                 }
                 .font(hanken(10, .bold))
-                .foregroundStyle(selected ? .white : p.text)
+                .foregroundStyle(p.text)
             } else {
                 Text(store.hourLabel(hour))
                     .font(hanken(store.format.twelve ? 11 : 13, .medium))
@@ -420,6 +481,17 @@ struct RibbonPanel: View {
             }
             if store.timeQuery == nil, let t = store.proposal {
                 Text(store.summary(at: t)).font(hanken(13)).foregroundStyle(p.mist).lineLimit(1)
+            }
+            if store.timeQuery == nil {
+                let notes = store.offNotes(at: store.proposal ?? store.instant(store.fairestCol))
+                if !notes.isEmpty {
+                    HStack(spacing: 6) {
+                        Image(systemName: "calendar.badge.exclamationmark")
+                        Text(notes.joined(separator: "  ·  ")).lineLimit(1)
+                    }
+                    .font(hanken(12, .semibold))
+                    .foregroundStyle(p.offText)
+                }
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 11)

@@ -18,6 +18,7 @@ final class NotchUI: ObservableObject {
 
     var onTap: () -> Void = {}
     var onSettings: () -> Void = {}
+    var onUpdates: () -> Void = {}
     var onQuit: () -> Void = {}
 }
 
@@ -80,6 +81,7 @@ struct NotchView: View {
         .onTapGesture { ui.onTap() }
         .contextMenu {
             Button("Places & appearance…") { ui.onSettings() }
+            Button("Check for Updates…") { ui.onUpdates() }
             Divider()
             Button("Quit Halfpast") { ui.onQuit() }
         }
@@ -98,10 +100,11 @@ struct NotchView: View {
         .fixedSize()
     }
 
-    /// Teal dot at work, orange dot awake, a moon asleep.
+    /// Teal dot at work (a ring on a day off), orange dot awake, a moon asleep.
     @ViewBuilder private func mark(_ row: Row) -> some View {
-        switch row.phase(at: store.now) {
+        switch store.phase(row, at: store.now) {
         case .work: Circle().fill(Trilegal.teal).frame(width: 7, height: 7)
+        case .off: Circle().strokeBorder(Trilegal.teal, lineWidth: 1.5).frame(width: 7, height: 7)
         case .awake: Circle().fill(Trilegal.orange).frame(width: 7, height: 7)
         case .asleep: Image(systemName: "moon.fill").font(.system(size: 9)).foregroundStyle(Trilegal.mist)
         }

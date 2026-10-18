@@ -9,10 +9,10 @@ Cleveland by default, each with a mark: teal dot at work, orange dot awake, moon
 Move away and it folds back. Works over full-screen apps too.
 
 Click the cap (or press **⌃⌥T** anywhere) and the glass ribbon drops out: one 24-hour strip
-per place, columns on the same moment, working hours (8–18) in teal, an orange line for now,
+per place, columns on the same moment, each place's working hours in teal (holidays in a warm orange), an orange line for now,
 the hour you pick in red, and the **fairest hour** outlined — the home hour that is least
-unkind to the worst-off place (hours outside 8–18 count against a place; ties go to the
-smallest total). Hover a column and every row's header shows that moment.
+unkind to the worst-off place (each hour outside a place's working hours counts against it, a
+weekend or holiday there four more; ties go to the smallest total). Hover a column and every row's header shows that moment.
 
 | Key | Action |
 |---|---|
@@ -57,7 +57,34 @@ hour). Click the other favourite's outline house to swap; star a third place and
 second favourite. Home can't be unstarred or removed. A place with `"zone": ""` (Bangalore)
 follows the Mac's time zone whether or not it is home.
 
-Right-click the cap for Places & appearance and Quit. Scripts can post the distributed
+**Working week and holidays.** The calendar button on each place in Places & appearance opens
+its working week on the right: hours (half-hour steps, default 8–18), working days (default the
+country's usual week — Sun–Thu in Saudi Arabia, Qatar, Kuwait, Bahrain, Oman, Egypt, Jordan,
+Israel…; Mon–Fri elsewhere), public holidays on or off, and days off of its own (an office
+closure, someone's leave). The grid colours a holiday's working hours orange and a weekend's as
+merely awake; the row header names the day ("Dussehra", "Sunday"); the bottom bar warns when
+the proposed (or fairest) time falls on one ("Thanksgiving Day in Cleveland"). Regional
+holidays ("Easter Monday" in England, Wales and Northern Ireland only) show as "Easter
+Monday?" and count only lightly. Holidays come from Google Calendar's public holiday calendars
+(`en.<country>#holiday@group.v.calendar.google.com`, no key or account; only the country is
+sent), are cached in `~/Library/Application Support/Halfpast/Holidays/<CC>.json` and refreshed
+monthly. The country comes from the place's time zone (macOS's zone.tab). Stored per place in
+places.json as `work` [start, end], `workdays` (1 = Sunday), `holidays: false`, `daysOff`
+["yyyy-MM-dd"] — absent means the default.
+
+**Travel.** When the Mac's time zone moves somewhere with a different clock from home, the
+places that follow the Mac (`"zone": ""`) stay on home's zone, and the ribbon's hint line asks
+"This Mac is on London time — Plan from London / Keep Bangalore". Planning from London makes
+London the top row and the clock everything is measured from (one of your places if it is on
+that zone, else a row of its own), with home kept below; the notch still shows your two
+favourites. The answer is saved as `travel` and cleared when the Mac is back on home's zone.
+
+**Updates.** Sparkle (2.10, in `vendor/`, fetched and checksum-checked by build.sh) checks
+https://exmachina.in/halfpast/appcast.xml once a day and offers a new version; right-click the
+cap › Check for Updates… does it now. Updates are verified with the EdDSA key in Info.plist
+(`SUPublicEDKey`) — see RELEASING.md.
+
+Right-click the cap for Places & appearance, Check for Updates and Quit. Scripts can post the distributed
 notifications `com.rahulmatthan.halfpast.toggle` and `com.rahulmatthan.halfpast.settings`.
 
 Without a notch (lid closed on an external display) a notch-sized spot at the top centre of the
@@ -66,9 +93,8 @@ main screen does the same job.
 ## Places
 
 `~/Library/Application Support/Halfpast/places.json` (created on first run; written by Places & appearance; an older `~/.config/zones/places.json` is adopted once).
-`"zone": ""` with `"home": true` follows the Mac's own time zone. When the Mac is
-set to a zone not in `homeHalfpast`, the home row is relabelled with where the
-clock actually is. `abbr` overrides the tzdata abbreviation (tzdata calls
+`"zone": ""` with `"home": true` follows the Mac's own time zone, while it is in `homeZones`
+(the zone it was set up in); elsewhere it stays on home's zone (see Travel). `abbr` overrides the tzdata abbreviation (tzdata calls
 Singapore "+08"). `favourites` names the two places beside the camera, home first; `clickSound: false`
 keeps the haptic but drops the Tink. Summer time comes from macOS's own time zone data, so it is
 always correct without a network.
@@ -86,13 +112,15 @@ Releasing a new version, and how signing and notarisation are set up: **RELEASIN
   keychain profile `notary` exists (see the top of the script).
 - First run: a welcome drops from the notch, and the app registers itself as a login item
   (SMAppService; switch in Places & appearance).
-- `docs/` — the website (index.html, screenshots in img/). The download link expects
-  `docs/Halfpast-1.0.dmg` next to it.
+- `docs/` — the website (index.html, screenshots in img/) and `appcast.xml`, the update feed
+  (written by build-dmg.sh). The download link expects `docs/Halfpast-<version>.dmg` next to it.
 
 Screenshots: `HALFPAST_SNAPSHOT=x.png [HALFPAST_TIME="7:30am NY tue"] [HALFPAST_LIGHT=1]`,
 `HALFPAST_SETTINGS=x.png [HALFPAST_FIVE=1 HALFPAST_QUERY=Tok]`, `HALFPAST_WELCOME=x.png`,
 `HALFPAST_NOTCH=x.png` on build/Halfpast.app/Contents/MacOS/Halfpast — they render and quit
-without changing settings.
+without changing settings (Config.save does nothing in snapshot mode). `HALFPAST_EDIT=<index>`
+opens a place's working week in the settings shot; `TZ=Europe/London HALFPAST_TRAVEL=ask|here|home`
+shows travel.
 
 ## Licence
 

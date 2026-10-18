@@ -36,6 +36,14 @@ then redesigned and renamed Halfpast — a nod to India's half-hour offset.
   Apple Maps (CLGeocoder) only when the user clicks "look up".
 - `Welcome.swift` — first-run welcome; `LoginItem` (SMAppService).
 - `Hotkey.swift` — Carbon RegisterEventHotKey (no Accessibility permission), from ~/Coding/orc-app.
+- `Holidays.swift` — `Holiday`, `DayOff` (weekend / holiday / own day / regional), `Country`
+  (zone → country from /usr/share/zoneinfo/zone.tab; usual working days), `Holidays` (Google
+  Calendar public holiday .ics per country, cached monthly in Application Support/Halfpast/Holidays).
+
+1.1 (Oct 2026) added per-place working weeks and holidays (`Store.dayOff`, `Store.phase`,
+`offNotes`; the editor is `SettingsView.week`), travel (`Store.away`, `planningHere`,
+`planRows` — the ribbon's rows; `places` stays indexed like places.json, which Settings relies
+on), and Sparkle updates (vendor/, `SPUStandardUpdaterController` in AppDelegate).
 
 Settings: `~/Library/Application Support/Halfpast/places.json` (the old ~/.config/zones file is
 adopted once). Bundle id `com.rahulmatthan.halfpast`. Distributed notifications
@@ -56,6 +64,10 @@ adopted once). Bundle id `com.rahulmatthan.halfpast`. Distributed notifications
   Singapore is overridden to SGT.
 - **Fonts**: Hanken Grotesk is bundled and registered at launch (CTFontManager, process scope);
   without that other Macs fall back to the system font.
+- **Snapshots and settings**: `Config.save` does nothing in snapshot mode — a 1.1 screenshot run
+  once saved a test `travel` into his file through an unrelated `change()`.
+- **Sparkle signing**: build-dmg.sh signs Autoupdate, Updater.app, the framework, then the app,
+  each with the hardened runtime (XPC services are removed in build.sh — not sandboxed).
 - `NSStatusBar`/notch geometry: `auxiliaryTopLeftArea`/`RightArea` give the camera housing;
   no notch → a 184-pt spot at the top centre of the main screen.
 

@@ -7,12 +7,16 @@
 	<key>CFBundleDisplayName</key><string>Halfpast</string>
 	<key>CFBundleExecutable</key><string>Halfpast</string>
 	<key>CFBundlePackageType</key><string>APPL</string>
-	<key>CFBundleShortVersionString</key><string>1.0</string>
-	<key>CFBundleVersion</key><string>1</string>
+	<key>CFBundleShortVersionString</key><string>1.1</string>
+	<key>CFBundleVersion</key><string>2</string>
 	<key>CFBundleIconFile</key><string>AppIcon</string>
 	<key>LSMinimumSystemVersion</key><string>15.0</string>
 	<key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
 	<key>LSUIElement</key><true/>
+	<key>SUFeedURL</key><string>https://exmachina.in/halfpast/appcast.xml</string>
+	<key>SUPublicEDKey</key><string>P/9Vf4SiMmurfz5lXZbtK+pgemz6sSa1Wg3j0GLCb50=</string>
+	<key>SUEnableAutomaticChecks</key><true/>
+	<key>SUScheduledCheckInterval</key><integer>86400</integer>
 	<key>NSHumanReadableCopyright</key><string>© 2026 Rahul Matthan. Hanken Grotesk is used under the SIL Open Font License.</string>
 </dict>
 </plist>

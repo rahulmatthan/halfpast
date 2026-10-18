@@ -2,6 +2,7 @@ import AppKit
 import Combine
 import CoreText
 import Carbon.HIToolbox
+import Sparkle
 import SwiftUI
 
 @main
@@ -67,6 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var mouseMonitor: Any?
     private var drag: (x: CGFloat, from: Date)?   // a block being dragged: where the press began
     private let click = NSSound(contentsOfFile: "/System/Library/Sounds/Tink.aiff", byReference: true)
+    private var updater: SPUStandardUpdaterController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -81,14 +83,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // For checking layouts without Screen Recording permission.
         let env = ProcessInfo.processInfo.environment
         if env["HALFPAST_SNAPSHOT"] != nil || env["HALFPAST_NOTCH"] != nil || env["HALFPAST_SETTINGS"] != nil || env["HALFPAST_WELCOME"] != nil {
-            snapshotMode = true
+            snapshotMode = true     // also stops anything below saving his settings
             if env["HALFPAST_FIVE"] != nil {      // five places, so the settings show the search
                 var c = store.config
                 c.places.removeAll { $0.label == "San Francisco" }
                 store.showWithoutSaving(c)
             }
+            if let t = env["HALFPAST_TRAVEL"] {     // with TZ=Europe/London: "here", "home" or "ask"
+                var c = store.config
+                c.travel = t == "ask" ? nil : Travel(zone: TimeZone.current.identifier, here: t == "here")
+                store.showWithoutSaving(c)
+            }
             if let c = env["HALFPAST_COL"].flatMap(Int.init) { store.propose(col: c) }
-            let keepMinutes = store.duration
             if let m = env["HALFPAST_MINUTES"].flatMap(Int.init) { store.setDuration(m) }
             if let q = env["HALFPAST_TIME"], let t = TimeParser.parse(q, store: store) { store.show(t) }
             for name in (env["HALFPAST_HIDE"] ?? "").split(separator: ",") { store.hidden.insert(name.lowercased()) }
@@ -99,7 +105,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 try? render(RibbonPanel(store: store, ui: ui, solid: true, hints: true).environment(\.colorScheme, scheme))?.write(to: URL(fileURLWithPath: path))
             }
             if let path = env["HALFPAST_SETTINGS"] {
-                try? render(SettingsView(store: store, ui: ui, query: env["HALFPAST_QUERY"] ?? "").background(scheme == .dark ? Color(hex: 0x081E32) : Color(hex: 0xF5F8FB))
+                try? render(SettingsView(store: store, ui: ui, query: env["HALFPAST_QUERY"] ?? "", editing: env["HALFPAST_EDIT"].flatMap(Int.init)).background(scheme == .dark ? Color(hex: 0x081E32) : Color(hex: 0xF5F8FB))
                     .environment(\.colorScheme, scheme))?.write(to: URL(fileURLWithPath: path))
             }
             if let path = env["HALFPAST_WELCOME"] {
@@ -108,10 +114,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if let path = env["HALFPAST_NOTCH"] {
                 try? render(NotchView(store: store, ui: ui).padding(30).background(Color(hex: 0x3A4A5A)))?.write(to: URL(fileURLWithPath: path))
             }
-            store.setDuration(keepMinutes)     // the snapshot must not change his setting
             NSApp.terminate(nil)
             return
         }
+
+        // Updates: Sparkle checks exmachina.in/halfpast/appcast.xml once a day (Info.plist) and
+        // offers a new version when there is one.
+        if Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") != nil {
+            updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        }
+        ui.onUpdates = { [weak self] in NSApp.activate(); self?.updater?.checkForUpdates(nil) }
 
         ui.onTap = { [weak self] in self?.togglePanel() }
         ui.onSettings = { [weak self] in self?.openPanel(settings: true) }
@@ -135,6 +147,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ui.$settingsShown.dropFirst().sink { [weak self] _ in DispatchQueue.main.async { self?.layoutPanel() } }.store(in: &watches)
         ui.$welcomeShown.dropFirst().sink { [weak self] _ in DispatchQueue.main.async { self?.layoutPanel() } }.store(in: &watches)
         store.$config.map(\.places.count).removeDuplicates().dropFirst().sink { [weak self] _ in
+            DispatchQueue.main.async { self?.layoutPanel() }
+        }.store(in: &watches)
+        store.$config.map(\.travel).removeDuplicates().dropFirst().sink { [weak self] _ in
             DispatchQueue.main.async { self?.layoutPanel() }
         }.store(in: &watches)
         store.$hidden.removeDuplicates().dropFirst().sink { [weak self] _ in
