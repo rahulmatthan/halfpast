@@ -110,9 +110,10 @@ enum Metrics {
     static let rowGap: CGFloat = 8
     static let top: CGFloat = 40
     static var pitch: CGFloat { cell + gap }
-    static var gridX: CGFloat { pad + header + headerGap }
+    static let bleed: CGFloat = 60      // how far each strip runs on past the day, fading out, either side
+    static var gridX: CGFloat { pad + header + headerGap + bleed }
     static var gridWidth: CGFloat { 24 * cell + 23 * gap }
-    static var panelWidth: CGFloat { gridX + gridWidth + pad }
+    static var panelWidth: CGFloat { gridX + gridWidth + bleed + pad }
     static let hiddenHeight: CGFloat = 26
 
     /// Height of the rows, with hidden ones folded down to a thin line.
@@ -347,27 +348,30 @@ struct RibbonPanel: View {
     /// an hour (or 45 minutes), the cells sit that far off home's columns, half cells showing at
     /// either end — the stagger the app is named for. Columns, the fairest hour, the now line and
     /// the proposed block stay on home's time and cut straight through.
+    /// The strip runs on past the day into yesterday and tomorrow — real hours, numbers and all —
+    /// and dissolves to nothing over `Metrics.bleed` either side, so no row has an end.
     private func strip(_ row: Row, _ p: Palette) -> some View {
         let m = row.cal.component(.minute, from: store.dayStart)   // minutes past its hour at the grid's start
-        let lead = Double(m) / 60 + store.scroll                     // columns its first cell starts left of the grid
+        let lead = Double(m) / 60 + store.scroll                     // columns its first day cell starts left of the grid
+        let first = -2, last = 26                                    // enough cells to cover the bleed either side
+        let width = Metrics.gridWidth + 2 * Metrics.bleed
+        let edge = Metrics.bleed / width                             // where the day begins, as a fraction of the strip
         return HStack(spacing: Metrics.gap) {
-            ForEach(0..<(lead == 0 ? 24 : 25), id: \.self) { k in
-                // Cells cut by either edge keep their colour but not their number.
-                let x = (Double(k) - lead) * Metrics.pitch
-                cell(row, store.dayStart.addingTimeInterval(Double(k) * 3600 - Double(m) * 60), p,
-                     label: x > -1 && x + Metrics.cell < Metrics.gridWidth + 1)
+            ForEach(first...last, id: \.self) { k in
+                cell(row, store.dayStart.addingTimeInterval(Double(k) * 3600 - Double(m) * 60), p)
             }
         }
-        .offset(x: -CGFloat(lead) * Metrics.pitch)
-        .frame(width: Metrics.gridWidth, alignment: .leading)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        // The ends fade, as if the strip runs on into yesterday and tomorrow.
-        .mask(LinearGradient(stops: [.init(color: .black.opacity(0.12), location: 0), .init(color: .black, location: 0.075),
-                                     .init(color: .black, location: 0.925), .init(color: .black.opacity(0.12), location: 1)],
+        .offset(x: Metrics.bleed + (CGFloat(first) - CGFloat(lead)) * Metrics.pitch)
+        .frame(width: width, alignment: .leading)
+        .clipped()
+        .mask(LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black.opacity(0.1), location: edge * 0.35),
+                                     .init(color: .black.opacity(0.45), location: edge * 0.7), .init(color: .black, location: edge),
+                                     .init(color: .black, location: 1 - edge), .init(color: .black.opacity(0.45), location: 1 - edge * 0.7),
+                                     .init(color: .black.opacity(0.1), location: 1 - edge * 0.35), .init(color: .clear, location: 1)],
                              startPoint: .leading, endPoint: .trailing))
     }
 
-    private func cell(_ row: Row, _ at: Date, _ p: Palette, label: Bool = true) -> some View {
+    private func cell(_ row: Row, _ at: Date, _ p: Palette) -> some View {
         let c = row.cal.dateComponents([.hour, .day, .weekday], from: at)
         let hour = c.hour ?? 0
         let phase = store.phase(row, at: at, mid: true)
@@ -375,9 +379,7 @@ struct RibbonPanel: View {
         let ink = [Phase.work: p.workText, .off: p.offText, .awake: p.awakeText, .asleep: p.asleepText][phase]!
         return ZStack {
             fill
-            if !label {
-                EmptyView()
-            } else if hour == 0 {
+            if hour == 0 {
                 // Midnight: the new day's name, so the date line reads across the rows.
                 VStack(spacing: 0) {
                     Text(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][(c.weekday ?? 1) - 1])

@@ -49,7 +49,8 @@ Settings: `~/Library/Application Support/Halfpast/places.json` (the old ~/.confi
 adopted once). Bundle id `com.rahulmatthan.halfpast`. Distributed notifications
 `com.rahulmatthan.halfpast.toggle` / `.settings` open the panel from scripts.
 
-1.2 added the stagger (each strip on its own clock, half cells at the ends, faded edges) and
+1.2 added the stagger (each strip on its own clock; 1.2.1 runs every strip on past the day
+into yesterday and tomorrow, fading to nothing over `Metrics.bleed`, with square ends) and
 "Keep now in the middle" (`Config.rolling`; `Store.scroll`, `columns`, `column(atX:)`,
 `shownDay`). Anything that maps between x and time must add `scroll` (see gridMouse and the
 `slide` offset in RibbonPanel).

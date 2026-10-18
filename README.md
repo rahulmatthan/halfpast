@@ -62,8 +62,8 @@ follows the Mac's time zone whether or not it is home.
 **Every place on its own clock.** Each row's cells are that place's own hours. Where its clock is
 off home's by half an hour (or 45 minutes), its cells sit that far off home's columns — on
 Bangalore time, Singapore's 10 straddles Bangalore's 7 and 8, and Bangalore's 8 lands in the
-middle of it (10:30). Half cells show at either end; the ends of every strip fade, as if running
-on into yesterday and tomorrow. Columns, hover, clicks, the fairest hour, the now line and the
+middle of it (10:30). Each strip also runs on past the day — real hours of yesterday and tomorrow, numbers
+and all — for `Metrics.bleed` either side, dissolving to nothing, so no row has an end. Columns, hover, clicks, the fairest hour, the now line and the
 proposed block stay on home's hours and cut straight through (`RibbonPanel.strip`).
 
 **Keep now in the middle** (switch at the top of Places & appearance, `rolling` in places.json,
