@@ -75,6 +75,8 @@ always correct without a network.
 
 ## Build, install, distribute
 
+Releasing a new version, and how signing and notarisation are set up: **RELEASING.md**.
+
 - `./build.sh` — universal app (Apple silicon + Intel) with swiftc, no Xcode; Hanken Grotesk is
   bundled (Resources/Fonts, SIL OFL) and registered at launch; the icon is drawn by
   `scripts/make-icon.swift` (delete Resources/AppIcon.icns to redraw).
