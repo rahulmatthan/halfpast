@@ -29,6 +29,12 @@ struct SettingsView: View {
                 HStack(alignment: .center, spacing: 16) {
                     Text("Places & appearance").font(hanken(22, .semibold))
                     Spacer()
+                    HStack(spacing: 8) {
+                        Text("Keep now in the middle").font(hanken(12, .semibold)).foregroundStyle(p.mist)
+                        toggle(store.config.rolling, p) { store.setRolling($0) }
+                    }
+                    .help("The ribbon shows twelve hours either side of now, and the rows drift as time passes")
+                    .padding(.trailing, 6)
                     appearancePicker(p)
                     Button { ui.settingsShown = false } label: {
                         Text("Done").font(hanken(13, .semibold)).foregroundStyle(.white)

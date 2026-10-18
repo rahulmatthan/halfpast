@@ -49,6 +49,11 @@ Settings: `~/Library/Application Support/Halfpast/places.json` (the old ~/.confi
 adopted once). Bundle id `com.rahulmatthan.halfpast`. Distributed notifications
 `com.rahulmatthan.halfpast.toggle` / `.settings` open the panel from scripts.
 
+1.2 added the stagger (each strip on its own clock, half cells at the ends, faded edges) and
+"Keep now in the middle" (`Config.rolling`; `Store.scroll`, `columns`, `column(atX:)`,
+`shownDay`). Anything that maps between x and time must add `scroll` (see gridMouse and the
+`slide` offset in RibbonPanel).
+
 ## Things that bit
 
 - **Clicks in a non-activating panel.** SwiftUI tap gestures on the grid were unreliable (and a

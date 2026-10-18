@@ -94,6 +94,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 c.travel = t == "ask" ? nil : Travel(zone: TimeZone.current.identifier, here: t == "here")
                 store.showWithoutSaving(c)
             }
+            if env["HALFPAST_ROLL"] != nil { var c = store.config; c.rolling = true; store.showWithoutSaving(c) }
             ui.updateReady = env["HALFPAST_UPDATE"]     // e.g. 1.2: shows the update reminders
             if let c = env["HALFPAST_COL"].flatMap(Int.init) { store.propose(col: c) }
             if let m = env["HALFPAST_MINUTES"].flatMap(Int.init) { store.setDuration(m) }
@@ -332,12 +333,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         switch e.type {
         case .leftMouseDown:
             guard onGrid else { drag = nil; return e }
-            let hours = Double((x - Metrics.gridX) / Metrics.pitch)
+            let hours = Double((x - Metrics.gridX) / Metrics.pitch) + store.scroll   // home hours from dayStart
             let start = store.proposal.map { $0.timeIntervalSince(store.dayStart) / 3600 }
             if let s = start, hours >= s - 0.1, hours <= s + Double(store.duration) / 60 + 0.1 {
                 drag = (x, store.proposal!)                 // pressed on the block: drag it
             } else {
-                store.propose(col: Int(hours))              // pressed elsewhere: the block starts at that hour
+                store.propose(col: store.column(atX: Double(x - Metrics.gridX), pitch: Double(Metrics.pitch)))   // pressed elsewhere: the block starts at that hour
                 drag = (x, store.proposal!)
             }
             return nil

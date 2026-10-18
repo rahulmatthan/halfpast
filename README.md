@@ -59,6 +59,20 @@ hour). Click the other favourite's outline house to swap; star a third place and
 second favourite. Home can't be unstarred or removed. A place with `"zone": ""` (Bangalore)
 follows the Mac's time zone whether or not it is home.
 
+**Every place on its own clock.** Each row's cells are that place's own hours. Where its clock is
+off home's by half an hour (or 45 minutes), its cells sit that far off home's columns — on
+Bangalore time, Singapore's 10 straddles Bangalore's 7 and 8, and Bangalore's 8 lands in the
+middle of it (10:30). Half cells show at either end; the ends of every strip fade, as if running
+on into yesterday and tomorrow. Columns, hover, clicks, the fairest hour, the now line and the
+proposed block stay on home's hours and cut straight through (`RibbonPanel.strip`).
+
+**Keep now in the middle** (switch at the top of Places & appearance, `rolling` in places.json,
+off by default): the ribbon shows twelve hours either side of now and drifts left as time passes
+— `dayStart` is home's hour twelve hours ago and every grid layer is drawn `Store.scroll`
+columns to the left; the 23 whole columns are `Store.columns`. The fairest hour is the best of
+the next 24 hours (if it's past the right edge the bar names its day, and f goes there), and a
+typed time without a day means the next time it comes round.
+
 **Working week and holidays.** The calendar button on each place in Places & appearance opens
 its working week on the right: hours (half-hour steps, default 8–18), working days (default the
 country's usual week — Sun–Thu in Saudi Arabia, Qatar, Kuwait, Bahrain, Oman, Egypt, Jordan,

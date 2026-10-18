@@ -98,10 +98,17 @@ enum TimeParser {
         return cal.date(bySettingHour: hour, minute: minute, second: 0, of: day)
     }
 
-    /// That wall-clock time in that zone, on the 24 hours the grid shows.
+    /// That wall-clock time in that zone, on the 24 hours the grid shows — or, with now kept in the
+    /// middle (half the grid is the past), the next time it comes round.
     private static func moment(hour: Int, minute: Int, in tz: TimeZone, store: Store) -> Date? {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = tz
+        if store.config.rolling && store.dayOffset == 0 {
+            let today = cal.startOfDay(for: store.now)
+            return (0...2).lazy.compactMap { cal.date(byAdding: .day, value: $0, to: today) }
+                .compactMap { cal.date(bySettingHour: hour, minute: minute, second: 0, of: $0) }
+                .first { $0 > store.now }
+        }
         let start = store.dayStart, end = start.addingTimeInterval(24 * 3600)
         let base = cal.startOfDay(for: start)
         for d in -1...1 {

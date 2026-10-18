@@ -67,7 +67,8 @@ struct Frost: NSViewRepresentable {
 
 /// Set when rendering screenshots (HALFPAST_* in AppDelegate): plain fills instead of glass, and
 /// text fields drawn as text, since ImageRenderer can draw neither.
-@MainActor var snapshotMode = false
+@MainActor var snapshotMode = ["HALFPAST_SNAPSHOT", "HALFPAST_NOTCH", "HALFPAST_SETTINGS", "HALFPAST_WELCOME"]
+    .contains { ProcessInfo.processInfo.environment[$0] != nil }     // set before anything loads or saves
 
 /// What the ribbon and the settings view share: the glass, its edge, and the Trilegal ribbon
 /// along the bottom.
@@ -144,6 +145,7 @@ struct RibbonPanel: View {
         let rows = store.rows
         let focus = store.focus
         let fair = store.fairestCol
+        let slide = -CGFloat(store.scroll) * Metrics.pitch     // now kept in the middle: everything drifts left
         let rowsHeight = Metrics.rowsHeight(rows.map(store.isHidden))
         PanelChrome(solid: solid) {
             ZStack(alignment: .topLeading) {
@@ -165,29 +167,29 @@ struct RibbonPanel: View {
                 .padding(.horizontal, Metrics.pad)
 
                 if !solid { daySwitcher(p).offset(x: Metrics.pad, y: 8) }
-                else { Text(store.date(store.dayStart, store.homeRow)).font(hanken(13, .semibold)).offset(x: Metrics.pad, y: 12) }
+                else { Text(store.date(store.shownDay, store.homeRow)).font(hanken(13, .semibold)).offset(x: Metrics.pad, y: 12) }
 
-                if store.proposal == nil {
+                if store.proposal == nil && store.columns.contains(fair) {
                     Text("FAIREST")
                         .font(hanken(11, .bold))
                         .foregroundStyle(p.fair)
                         .frame(width: 80)
-                        .offset(x: Metrics.gridX + (CGFloat(fair) + 0.5) * Metrics.pitch - 40, y: 14)
+                        .offset(x: Metrics.gridX + (CGFloat(fair) + 0.5) * Metrics.pitch - 40 + slide, y: 14)
                 }
                 RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(p.fair.opacity(store.proposal == nil ? 1 : 0.45), lineWidth: 2)
+                    .strokeBorder(p.fair.opacity(!store.columns.contains(fair) ? 0 : store.proposal == nil ? 1 : 0.45), lineWidth: 2)
                     .frame(width: Metrics.cell + 4, height: rowsHeight + 12)
-                    .offset(x: Metrics.gridX + CGFloat(fair) * Metrics.pitch - 2, y: Metrics.top - 6)
+                    .offset(x: Metrics.gridX + CGFloat(fair) * Metrics.pitch - 2 + slide, y: Metrics.top - 6)
                     .allowsHitTesting(false)
                 if store.proposal == nil, let hc = store.hoverCol {
                     RoundedRectangle(cornerRadius: 7)
                         .strokeBorder(p.text.opacity(0.5), lineWidth: 1.5)
                         .frame(width: Metrics.cell + 2, height: rowsHeight + 4)
-                        .offset(x: Metrics.gridX + CGFloat(hc) * Metrics.pitch - 1, y: Metrics.top - 2)
+                        .offset(x: Metrics.gridX + CGFloat(hc) * Metrics.pitch - 1 + slide, y: Metrics.top - 2)
                         .allowsHitTesting(false)
                 }
-                nowLine(height: rowsHeight + 16, p)
-                block(height: rowsHeight, p)
+                nowLine(height: rowsHeight + 16, p).offset(x: slide)
+                block(height: rowsHeight, p).offset(x: slide)
             }
             .frame(width: Metrics.panelWidth, alignment: .topLeading)
             .contentShape(Rectangle())
@@ -195,7 +197,7 @@ struct RibbonPanel: View {
                 switch phase {
                 case .active(let pt):
                     let x = pt.x - Metrics.gridX
-                    store.hoverCol = x >= 0 && x < Metrics.gridWidth && pt.y > Metrics.top - 8 ? Int(x / Metrics.pitch) : nil
+                    store.hoverCol = x >= 0 && x < Metrics.gridWidth && pt.y > Metrics.top - 8 ? store.column(atX: x, pitch: Metrics.pitch) : nil
                 case .ended: store.hoverCol = nil
                 }
             }
@@ -341,15 +343,31 @@ struct RibbonPanel: View {
         [row.abbr(at: focus), store.date(focus, row), store.diff(row, at: focus)].filter { !$0.isEmpty }.joined(separator: " · ")
     }
 
+    /// A place's strip: one cell per hour of its own clock. Where its clock is off home's by half
+    /// an hour (or 45 minutes), the cells sit that far off home's columns, half cells showing at
+    /// either end — the stagger the app is named for. Columns, the fairest hour, the now line and
+    /// the proposed block stay on home's time and cut straight through.
     private func strip(_ row: Row, _ p: Palette) -> some View {
-        HStack(spacing: Metrics.gap) {
-            ForEach(0..<24, id: \.self) { col in cell(row, col, p) }
+        let m = row.cal.component(.minute, from: store.dayStart)   // minutes past its hour at the grid's start
+        let lead = Double(m) / 60 + store.scroll                     // columns its first cell starts left of the grid
+        return HStack(spacing: Metrics.gap) {
+            ForEach(0..<(lead == 0 ? 24 : 25), id: \.self) { k in
+                // Cells cut by either edge keep their colour but not their number.
+                let x = (Double(k) - lead) * Metrics.pitch
+                cell(row, store.dayStart.addingTimeInterval(Double(k) * 3600 - Double(m) * 60), p,
+                     label: x > -1 && x + Metrics.cell < Metrics.gridWidth + 1)
+            }
         }
+        .offset(x: -CGFloat(lead) * Metrics.pitch)
+        .frame(width: Metrics.gridWidth, alignment: .leading)
         .clipShape(RoundedRectangle(cornerRadius: 10))
+        // The ends fade, as if the strip runs on into yesterday and tomorrow.
+        .mask(LinearGradient(stops: [.init(color: .black.opacity(0.12), location: 0), .init(color: .black, location: 0.075),
+                                     .init(color: .black, location: 0.925), .init(color: .black.opacity(0.12), location: 1)],
+                             startPoint: .leading, endPoint: .trailing))
     }
 
-    private func cell(_ row: Row, _ col: Int, _ p: Palette) -> some View {
-        let at = store.instant(col)
+    private func cell(_ row: Row, _ at: Date, _ p: Palette, label: Bool = true) -> some View {
         let c = row.cal.dateComponents([.hour, .day, .weekday], from: at)
         let hour = c.hour ?? 0
         let phase = store.phase(row, at: at, mid: true)
@@ -357,7 +375,9 @@ struct RibbonPanel: View {
         let ink = [Phase.work: p.workText, .off: p.offText, .awake: p.awakeText, .asleep: p.asleepText][phase]!
         return ZStack {
             fill
-            if hour == 0 {
+            if !label {
+                EmptyView()
+            } else if hour == 0 {
                 // Midnight: the new day's name, so the date line reads across the rows.
                 VStack(spacing: 0) {
                     Text(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][(c.weekday ?? 1) - 1])
@@ -381,7 +401,7 @@ struct RibbonPanel: View {
                 Image(systemName: "chevron.left").frame(width: 20, height: 20).contentShape(Rectangle())
             }
             .buttonStyle(.plain).help("Previous day ([)")
-            Text(store.dayOffset == 0 ? "Today · \(store.date(store.dayStart, store.homeRow))" : store.date(store.dayStart, store.homeRow))
+            Text(store.dayOffset == 0 ? "Today · \(store.date(store.shownDay, store.homeRow))" : store.date(store.shownDay, store.homeRow))
                 .font(hanken(13, .semibold))
                 .foregroundStyle(store.dayOffset == 0 ? p.mist : p.text)
                 .frame(minWidth: 112)
@@ -476,8 +496,12 @@ struct RibbonPanel: View {
                     }
                 } else {
                     Image(systemName: "person.3.fill").foregroundStyle(p.fair)
+                    // Past the edge (now in the middle): say which day, and that f goes there.
+                    let ahead = !store.columns.contains(store.fairestCol)
                     (Text("Fairest hour   ").font(hanken(14, .bold)).foregroundColor(p.fair)
-                        + Text(store.summary(at: store.instant(store.fairestCol))).font(hanken(14)))
+                        + Text(ahead ? "\(store.date(store.instant(store.fairestCol), store.homeRow)) · " : "").font(hanken(14, .semibold))
+                        + Text(store.summary(at: store.instant(store.fairestCol))).font(hanken(14))
+                        + Text(ahead ? "   f to go there" : "").font(hanken(12)).foregroundColor(p.mist))
                         .lineLimit(1)
                     Spacer(minLength: 8)
                     if !solid { copyButton(p) }

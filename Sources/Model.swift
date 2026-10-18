@@ -29,6 +29,7 @@ struct Config: Codable {
     var meetingMinutes = 60                     // the length of a proposed meeting: 15, 30, 45 or 60
     var welcomed = false                        // the first-run welcome has been shown
     var travel: Travel? = nil                   // set while the Mac is on another zone
+    var rolling = false                         // keep now in the middle; the rows drift as time passes
     var places = Config.defaultPlaces
 
     /// A new Mac's places: home (its own time zone, named after its city) and the first three of
@@ -65,6 +66,7 @@ struct Config: Codable {
         welcomed = try c.decodeIfPresent(Bool.self, forKey: .welcomed) ?? d.welcomed
         places = try c.decodeIfPresent([Place].self, forKey: .places) ?? d.places
         travel = try c.decodeIfPresent(Travel.self, forKey: .travel)
+        rolling = try c.decodeIfPresent(Bool.self, forKey: .rolling) ?? d.rolling
     }
 
     static let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -121,8 +123,8 @@ struct Config: Codable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case hourFormat, homeZones, favourites, clickSound, appearance, meetingMinutes, welcomed, travel, places
-        static let allNames = ["hourFormat", "homeZones", "favourites", "clickSound", "appearance", "meetingMinutes", "welcomed", "places"]
+        case hourFormat, homeZones, favourites, clickSound, appearance, meetingMinutes, welcomed, travel, rolling, places
+        static let allNames = ["hourFormat", "homeZones", "favourites", "clickSound", "appearance", "meetingMinutes", "welcomed", "rolling", "places"]
     }
     private enum Legacy: String, CodingKey { case notch }
 }
@@ -288,7 +290,7 @@ final class Store: ObservableObject {
         return v.isEmpty ? all : v
     }
 
-    func col(_ date: Date) -> Int { max(0, min(23, Int(floor(date.timeIntervalSince(dayStart) / 3600)))) }
+    func col(_ date: Date) -> Int { max(0, min(columns.upperBound, Int(floor(date.timeIntervalSince(dayStart) / 3600)))) }
 
     /// The configured places in their order (ids are their places.json index), without the UTC
     /// row or a travel row. A place that follows the Mac stays on home's zone while he travels.
@@ -454,10 +456,40 @@ final class Store: ObservableObject {
 
     var homeRow: Row { planRows.first { $0.isHome } ?? planRows[0] }
 
-    /// Column 0 of the grid: the home zone's most recent midnight.
+    /// Column 0 of the grid: the home zone's most recent midnight — or, keeping now in the middle,
+    /// the start of home's hour twelve hours ago (then the grid also slides by `scroll`).
     var dayStart: Date {
+        if config.rolling { return rollingBase.addingTimeInterval(Double(dayOffset) * 86400) }
         let today = homeRow.cal.startOfDay(for: now)
         return homeRow.cal.date(byAdding: .day, value: dayOffset, to: today) ?? today
+    }
+
+    private var rollingBase: Date {
+        (homeRow.cal.dateInterval(of: .hour, for: now)?.start ?? now).addingTimeInterval(-12 * 3600)
+    }
+
+    /// How far into home's hour it is (0–1), when now is kept in the middle: the whole grid is
+    /// drawn that many columns to the left, so now stays put and the rows drift.
+    var scroll: Double {
+        guard config.rolling, let h = homeRow.cal.dateInterval(of: .hour, for: now) else { return 0 }
+        return now.timeIntervalSince(h.start) / 3600
+    }
+
+    /// The columns wholly on screen: the day's 24, or while the grid drifts, the 23 between its
+    /// half-shown ends.
+    var columns: ClosedRange<Int> { scroll > 0 ? 1...23 : 0...23 }
+
+    /// The home column under a point on the grid (x from the grid's left edge).
+    func column(atX x: Double, pitch: Double) -> Int {
+        min(max(Int(floor(x / pitch + scroll)), columns.lowerBound), columns.upperBound)
+    }
+
+    /// The date the grid is about: its day, or with now in the middle, the middle's.
+    var shownDay: Date { config.rolling ? dayStart.addingTimeInterval(12 * 3600 + scroll * 3600) : dayStart }
+
+    func setRolling(_ on: Bool) {
+        change { $0.rolling = on }
+        backToNow()
     }
 
     /// Shows another day; a proposed time moves with it, keeping its time of day.
@@ -471,7 +503,11 @@ final class Store: ObservableObject {
     /// Proposes a moment on whatever day it falls (home's date), moving the grid there.
     func show(_ t: Date) {
         let cal = homeRow.cal
-        dayOffset = cal.dateComponents([.day], from: cal.startOfDay(for: now), to: cal.startOfDay(for: t)).day ?? 0
+        if config.rolling {
+            dayOffset = Int((t.timeIntervalSince(rollingBase.addingTimeInterval(12 * 3600)) / 86400).rounded())
+        } else {
+            dayOffset = cal.dateComponents([.day], from: cal.startOfDay(for: now), to: cal.startOfDay(for: t)).day ?? 0
+        }
         proposal = t
         hoverCol = nil
     }
@@ -493,7 +529,7 @@ final class Store: ObservableObject {
     /// The moment the headers describe: the hovered hour, else the proposed time, else now.
     var focus: Date { proposal ?? hoverCol.map(instant) ?? now }
 
-    /// The home hour that is least unkind to the worst-off place: each hour outside a place's
+    /// The home hour (of those shown) that is least unkind to the worst-off place: each hour outside a place's
     /// working hours counts against it, and a weekend or holiday there counts four more (a
     /// regional holiday one more); the smallest worst case wins, and the total breaks ties.
     var fairestCol: Int {
@@ -505,8 +541,11 @@ final class Store: ObservableObject {
             return outside + (day == nil ? 0 : day!.off ? 4 : 1)
         }
         let ps = visiblePlaces
-        var best = (Double.infinity, Double.infinity), col = 0
-        for c in 0..<24 {
+        // With now in the middle, the next 24 hours — the best of them may be past the right edge.
+        let nowCol = Int(floor(now.timeIntervalSince(dayStart) / 3600))
+        let ahead = config.rolling && dayOffset == 0 ? Array((nowCol + 1)...(nowCol + 24)) : Array(columns)
+        var best = (Double.infinity, Double.infinity), col = ahead[0]
+        for c in ahead {
             let p = ps.map { penalty($0, instant(c)) }
             let score = (p.max() ?? 0, p.reduce(0, +))
             if score.0 < best.0 || (score.0 == best.0 && score.1 < best.1) { best = score; col = c }
@@ -609,17 +648,21 @@ final class Store: ObservableObject {
         place(base.addingTimeInterval(Double(minutes) * 60))
     }
 
-    /// Puts the block at a moment, snapped to 5 minutes and kept within the day shown.
+    /// Puts the block at a moment, snapped to 5 minutes and kept within the hours shown.
     func place(_ t: Date) {
         let fromStart = (t.timeIntervalSince(dayStart) / 300).rounded() * 300
-        let latest = Double(24 * 60 - duration) * 60
-        proposal = dayStart.addingTimeInterval(min(max(fromStart, 0), latest))
+        let earliest = (scroll * 12).rounded(.up) * 300
+        let latest = Double(24 * 60 - duration) * 60 + earliest
+        proposal = dayStart.addingTimeInterval(min(max(fromStart, earliest), latest))
         hoverCol = nil
     }
 
-    func propose(col: Int) { proposal = instant(col); hoverCol = nil }
+    func propose(col: Int) { proposal = instant(min(max(col, columns.lowerBound), columns.upperBound)); hoverCol = nil }
 
-    func jumpToFairest() { propose(col: fairestCol) }
+    func jumpToFairest() {
+        let c = fairestCol
+        if columns.contains(c) { propose(col: c) } else { show(instant(c)) }   // off screen: move there
+    }
 
     func backToNow() { proposal = nil; hoverCol = nil; timeQuery = nil; dayOffset = 0 }
 
