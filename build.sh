@@ -18,7 +18,7 @@ APP=build/Halfpast.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/Fonts" "$APP/Contents/Frameworks" build/arch
 for arch in arm64 x86_64; do
-  swiftc -swift-version 5 -O -parse-as-library -target $arch-apple-macos15.0 \
+  swiftc -swift-version 5 -O -parse-as-library -target $arch-apple-macos13.0 \
     -F vendor -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
     -o build/arch/Halfpast-$arch Sources/*.swift
 done

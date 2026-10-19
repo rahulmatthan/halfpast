@@ -128,7 +128,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Close the panel first: it hangs at status-bar level and would cover Sparkle's window.
         ui.onUpdates = { [weak self] in
             self?.closePanel()
-            NSApp.activate()
+            if #available(macOS 14, *) { NSApp.activate() } else { NSApp.activate(ignoringOtherApps: true) }
             self?.updater?.checkForUpdates(nil)
         }
 

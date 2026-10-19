@@ -109,8 +109,9 @@ Right-click the cap for Places & appearance, Check for Updates and Quit — also
 Places & appearance, and `u` / ⌘Q in the ribbon. Scripts can post the distributed
 notifications `com.rahulmatthan.halfpast.toggle` and `com.rahulmatthan.halfpast.settings`.
 
-Without a notch (lid closed on an external display) a notch-sized spot at the top centre of the
-main screen does the same job.
+Without a notch (a MacBook Air M1 or older, or the lid closed on an external display) a
+notch-sized spot at the top centre of the main screen does the same job: the black cap grows
+out of the menu bar there. Runs on macOS 13 Ventura or later (1.0–1.2.1 needed 15).
 
 ## Places
 

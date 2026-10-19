@@ -391,7 +391,7 @@ struct SettingsView: View {
         .frame(height: 40)
         .background(p.chip, in: RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(searching ? p.fair : p.chipBorder))
-        .onChange(of: query) { remote = [] }
+        .onChange(of: query) { _ in remote = [] }
     }
 
     private var matches: [City] {

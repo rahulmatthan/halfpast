@@ -4,16 +4,16 @@
     <title>Halfpast</title>
     <link>https://exmachina.in/halfpast/</link>
     <item>
-      <title>Halfpast 1.2.1</title>
-      <pubDate>Sun, 18 Oct 2026 18:20:07 +0000</pubDate>
-      <sparkle:version>5</sparkle:version>
-      <sparkle:shortVersionString>1.2.1</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[<h3>Halfpast 1.2.1</h3>
+      <title>Halfpast 1.2.2</title>
+      <pubDate>Mon, 19 Oct 2026 13:56:32 +0000</pubDate>
+      <sparkle:version>6</sparkle:version>
+      <sparkle:shortVersionString>1.2.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<h3>Halfpast 1.2.2</h3>
 <ul>
-<li><b>Rows without ends.</b> Every row now runs on past the day — into yesterday's last hours and tomorrow's first — and dissolves, so the day reads as a window on time that keeps going.</li>
+<li><b>Runs on older Macs.</b> Halfpast now works on macOS 13 Ventura and 14 Sonoma, not just 15 and later. On Macs without a notch, rest the pointer at the top centre of the screen.</li>
 </ul>]]></description>
-      <enclosure url="https://exmachina.in/halfpast/Halfpast-1.2.1.dmg" type="application/octet-stream" sparkle:edSignature="6ojbYbQM+KxIiI+DtQulYR6STcP2s2YsH/P4q4/tcGCz9mIl6OVBWjN07SeFK8rD+v6JLQwvafTgz/aXdqogBw==" length="2673262" />
+      <enclosure url="https://exmachina.in/halfpast/Halfpast-1.2.2.dmg" type="application/octet-stream" sparkle:edSignature="VFbx8Y8sj+bcaZSvTDa2/BC5XJyrdSBM4BikQeWMj0WfviB+DfBinK0kCVPdIOiko3J1FQKUipdppyimXgQbDg==" length="2685034" />
     </item>
   </channel>
 </rss>

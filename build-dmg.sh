@@ -15,6 +15,7 @@ cd "${0:A:h}"
 IDENTITY="Developer ID Application: Rahul Matthan (GAMJ6J6LT3)"
 VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Resources/Info.plist)
 BUILD=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" Resources/Info.plist)
+MINOS=$(/usr/libexec/PlistBuddy -c "Print LSMinimumSystemVersion" Resources/Info.plist)
 APP=build/Halfpast.app
 DMG=dist/Halfpast-$VERSION.dmg
 URL=https://exmachina.in/halfpast/Halfpast-$VERSION.dmg
@@ -62,7 +63,7 @@ cat > docs/appcast.xml <<XML
       <pubDate>$(LC_ALL=C date -u "+%a, %d %b %Y %H:%M:%S +0000")</pubDate>
       <sparkle:version>$BUILD</sparkle:version>
       <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+      <sparkle:minimumSystemVersion>$MINOS</sparkle:minimumSystemVersion>
       <description><![CDATA[$( [ -f $NOTES ] && cat $NOTES )]]></description>
       <enclosure url="$URL" type="application/octet-stream" $SIG />
     </item>
