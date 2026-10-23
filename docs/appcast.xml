@@ -13,7 +13,7 @@
 <ul>
 <li><b>Runs on older Macs.</b> Halfpast now works on macOS 13 Ventura and 14 Sonoma, not just 15 and later. On Macs without a notch, rest the pointer at the top centre of the screen.</li>
 </ul>]]></description>
-      <enclosure url="https://exmachina.in/halfpast/Halfpast-1.2.2.dmg" type="application/octet-stream" sparkle:edSignature="VFbx8Y8sj+bcaZSvTDa2/BC5XJyrdSBM4BikQeWMj0WfviB+DfBinK0kCVPdIOiko3J1FQKUipdppyimXgQbDg==" length="2685034" />
+      <enclosure url="https://github.com/rahulmatthan/halfpast/releases/download/v1.2.2/Halfpast-1.2.2.dmg" type="application/octet-stream" sparkle:edSignature="VFbx8Y8sj+bcaZSvTDa2/BC5XJyrdSBM4BikQeWMj0WfviB+DfBinK0kCVPdIOiko3J1FQKUipdppyimXgQbDg==" length="2685034" />
     </item>
   </channel>
 </rss>

@@ -18,7 +18,8 @@ BUILD=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" Resources/Info.plist)
 MINOS=$(/usr/libexec/PlistBuddy -c "Print LSMinimumSystemVersion" Resources/Info.plist)
 APP=build/Halfpast.app
 DMG=dist/Halfpast-$VERSION.dmg
-URL=https://exmachina.in/halfpast/Halfpast-$VERSION.dmg
+# Served from the GitHub release (which counts downloads), not Pages: create the release first.
+URL=https://github.com/rahulmatthan/halfpast/releases/download/v$VERSION/Halfpast-$VERSION.dmg
 
 ./build.sh
 # Inside out: Sparkle's helpers, then Sparkle, then the app — each with the hardened runtime.

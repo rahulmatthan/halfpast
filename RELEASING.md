@@ -11,8 +11,11 @@ Mac's login keychain (and backed up outside the repo, see "On a new Mac").
 - `dist/Halfpast-<version>.dmg` — the universal app (Apple silicon + Intel), signed with the
   Developer ID, hardened runtime, notarised by Apple and stapled, in a drag-to-Applications
   disk image.
-- The same file in `docs/` (the website's "Download for Mac" button links to it by name) and
-  attached to a GitHub release `v<version>`.
+- The same file attached to a GitHub release `v<version>`. The website's "Download for Mac"
+  button and the update feed both link to the release file, so GitHub counts every download
+  (new installs and Sparkle updates together): `gh release view v<version> --json assets`, or
+  the releases page. Pages keeps no statistics, which is why the .dmg is no longer served from
+  `docs/` (1.2.2's copy stays there only so old links keep working).
 - `docs/appcast.xml` — the update feed. Every copy of Halfpast from 1.1 on reads it once a day
   (Sparkle) and offers the version it names. It is written by `build-dmg.sh` and is live as soon
   as it is pushed — so push it only together with the .dmg it points to.
@@ -32,21 +35,21 @@ Mac's login keychain (and backed up outside the repo, see "On a new Mac").
    the ticket, checks it with `spctl`, and finally signs the image with the Sparkle key and writes
    `docs/appcast.xml`. It must print `notarised: dist/Halfpast-<version>.dmg` and then
    `appcast: …`; "signed but NOT notarised" means the notary profile is missing (below). The
-   first `sign_update` on a Mac asks for keychain access to "Private key for signing Sparkle
-   updates" — Always Allow.
-4. **Check it as a download would be checked**:
-   `spctl -a -vv -t open --context context:primary-signature dist/Halfpast-<version>.dmg`
-   → `accepted`, `source=Notarized Developer ID`.
-5. **Update the website**:
-   - `git rm docs/Halfpast-<old>.dmg` and copy the new one into `docs/`.
-   - In `docs/index.html`, change the two `Halfpast-<old>.dmg` links, the version in the footer
-     ("Halfpast 1.0"), and the size in the line under the button if it changed.
-   - If the panels look different, refresh the screenshots (README › Build, the `HALFPAST_*`
-     variables) into `docs/img/`.
-6. **Commit and push** (the .dmg, appcast.xml and the page together). Pages rebuilds in about a
-   minute; from then on every copy of Halfpast 1.1 or later offers the update within a day.
-7. **GitHub release**: `gh release create v<version> dist/Halfpast-<version>.dmg --title "Halfpast <version>" --notes "<what changed>"`.
-8. **Check the live download**: download https://exmachina.in/halfpast/Halfpast-<version>.dmg,
+   fi5. **GitHub release first**, because the feed and the site will point at it:
+   `gh release create v<version> dist/Halfpast-<version>.dmg --title "Halfpast <version>" --notes "<what changed>"`.
+6. **Update the website**: in `docs/index.html`, change the two download links
+   (`…/releases/download/v<old>/Halfpast-<old>.dmg`), the version in the footer, and the size in
+   the line under the button if it changed. Don't copy the .dmg into `docs/`. If the panels look
+   different, refresh the screenshots (README › Build, the `HALFPAST_*` variables) into `docs/img/`.
+7. **Commit and push** (appcast.xml and the page together). Pages rebuilds in about a minute;
+   from then on every copy of Halfpast 1.1 or later offers the update within a day.
+8. **Check the live download**: download
+   https://github.com/rahulmatthan/halfpast/releases/download/v<version>/Halfpast-<version>.dmg,
+   `cmp` it with `dist/`, and run the `spctl` check on the downloaded copy.
+9. **Check the feed**: `curl -s https://exmachina.in/halfpast/appcast.xml` shows the new version
+   with the GitHub URL, and `u` in the ribbon on an older copy offers it.
+
+s://exmachina.in/halfpast/Halfpast-<version>.dmg,
    `cmp` it with `dist/`, and run the `spctl` check on the downloaded copy.
 
 9. **Check the feed**: `curl -s https://exmachina.in/halfpast/appcast.xml` shows the new version,

@@ -136,7 +136,8 @@ Releasing a new version, and how signing and notarisation are set up: **RELEASIN
 - First run: a welcome drops from the notch, and the app registers itself as a login item
   (SMAppService; switch in Places & appearance).
 - `docs/` — the website (index.html, screenshots in img/) and `appcast.xml`, the update feed
-  (written by build-dmg.sh). The download link expects `docs/Halfpast-<version>.dmg` next to it.
+  (written by build-dmg.sh). Downloads and updates come from the GitHub release `v<version>`,
+  so GitHub counts them (`gh release view v<version> --json assets`).
 
 Screenshots: `HALFPAST_SNAPSHOT=x.png [HALFPAST_TIME="7:30am NY tue"] [HALFPAST_LIGHT=1]`,
 `HALFPAST_SETTINGS=x.png [HALFPAST_FIVE=1 HALFPAST_QUERY=Tok]`, `HALFPAST_WELCOME=x.png`,
